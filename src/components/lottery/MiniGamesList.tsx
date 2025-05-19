@@ -13,7 +13,13 @@ const MiniGamesList = () => {
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {displayedGames.map(game => (
-          <MiniGameCard key={game.id} {...game} />
+          <MiniGameCard 
+            key={game.id} 
+            id={game.id}
+            title={game.name} // Changed from name to title to match MiniGameCard props
+            description={game.description} 
+            image={game.image} 
+          />
         ))}
       </div>
       
