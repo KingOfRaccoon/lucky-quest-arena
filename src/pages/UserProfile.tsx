@@ -1,21 +1,16 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Ticket,
-  User,
-  Coins,
-  Crown,
-  Clock,
-  Calendar,
-  ChevronRight
-} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { User, ArrowRight, Trophy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Ticket, User, Coins, Crown, Clock, Calendar, ChevronRight } from "lucide-react";
 import { user, lotteries } from "@/data/mockData";
 
 const UserProfile = () => {
