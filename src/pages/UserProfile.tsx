@@ -8,9 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { User, ArrowRight, Trophy } from "lucide-react";
+import { ArrowRight, Trophy, Ticket, Coins, Crown, Clock, Calendar, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Ticket, User, Coins, Crown, Clock, Calendar, ChevronRight } from "lucide-react";
 import { user, lotteries } from "@/data/mockData";
 
 const UserProfile = () => {
@@ -103,14 +102,14 @@ const UserProfile = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center">
-              <User className="h-4 w-4 mr-2 text-primary" />
+              <ArrowRight className="h-4 w-4 mr-2 text-primary" />
               Профиль пользователя
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8 text-primary" />
+                <ArrowRight className="h-8 w-8 text-primary" />
               </div>
               <div>
                 <h3 className="font-semibold text-lg">{user.username}</h3>
