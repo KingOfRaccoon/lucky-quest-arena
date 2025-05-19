@@ -114,11 +114,22 @@ const BattlePass = () => {
                     <div key={level.level} className="flex-1 px-2">
                       <div className="relative">
                         {index > 0 && (
-                          <div 
-                            className={`absolute h-0.5 top-6 -left-1/2 right-1/2 ${
-                              isCompleted ? 'bg-primary' : 'bg-gray-300'
-                            }`}
-                          ></div>
+                          <div className="absolute h-0.5 top-6 -left-[calc(50%-16px)] w-[calc(100%-32px)]">
+                            <div 
+                              className={`h-full ${
+                                isCompleted 
+                                  ? 'bg-primary' 
+                                  : index <= user.battlePassLevel
+                                    ? 'bg-primary'
+                                    : 'bg-gray-300'
+                              }`}
+                              style={{
+                                width: index === user.battlePassLevel + 1 
+                                  ? `${progress}%` 
+                                  : '100%'
+                              }}
+                            ></div>
+                          </div>
                         )}
                         <div 
                           className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto border-2 ${
@@ -156,10 +167,24 @@ const BattlePass = () => {
                           <Button variant="default" size="sm" className="w-full" disabled>
                             Получено
                           </Button>
-                        ) : isCurrent && progress >= 100 ? (
-                          <Button variant="default" size="sm" className="w-full" onClick={handleClaimReward}>
-                            Получить
-                          </Button>
+                        ) : isCurrent ? (
+                          <div className="space-y-2">
+                            <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary"
+                                style={{ width: `${progress}%` }}
+                              ></div>
+                            </div>
+                            <Button 
+                              variant="default" 
+                              size="sm" 
+                              className="w-full" 
+                              onClick={handleClaimReward}
+                              disabled={progress < 100}
+                            >
+                              {progress >= 100 ? 'Получить' : `${Math.floor(progress)}%`}
+                            </Button>
+                          </div>
                         ) : (
                           <Button variant="outline" size="sm" className="w-full" disabled>
                             Заблокировано
