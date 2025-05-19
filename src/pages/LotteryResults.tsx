@@ -17,11 +17,12 @@ import {
   Clock,
   ArrowRight
 } from "lucide-react";
-import { lotteries } from "@/data/mockData";
+import {Lottery, useLotteries} from "@/LotteriesContext.tsx";
 
 const LotteryResults = () => {
   const { id } = useParams();
-  const [lottery, setLottery] = useState<any>(null);
+  const { lotteries } = useLotteries()
+  const [lottery, setLottery] = useState<Lottery>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Тестовые данные для результатов лотереи

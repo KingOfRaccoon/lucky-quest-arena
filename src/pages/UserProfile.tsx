@@ -18,13 +18,15 @@ import {
   ChevronRight,
   UserRound
 } from "lucide-react";
-import { user, lotteries } from "@/data/mockData";
+import { user } from "@/data/mockData";
+import {useLotteries} from "@/LotteriesContext.tsx";
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { balance, bonusBalance, addBalance } = useBalance();
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState(500);
+  const { lotteries } = useLotteries()
   
   // Тестовые данные для билетов пользователя
   const userTickets = [

@@ -7,12 +7,14 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Ticket, Gift, Crown, Trophy, Clock, ArrowRight, User } from "lucide-react";
-import { lotteries, miniGames, user, battlePassLevels, dailyTasks } from "@/data/mockData";
+import { miniGames, user, battlePassLevels, dailyTasks } from "@/data/mockData";
+import {useLotteries} from "@/LotteriesContext.tsx";
 
 const Index = () => {
   const [countdown, setCountdown] = useState({ minutes: 0, seconds: 0 });
+  const { lotteries } = useLotteries();
   const [nextLottery, setNextLottery] = useState(lotteries[0]);
-  
+
   // Calculate time until next draw
   useEffect(() => {
     const sortedLotteries = [...lotteries].sort((a, b) => 

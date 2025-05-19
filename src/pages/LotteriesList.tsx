@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Search, TrendingUp, Users, Zap } from "lucide-react";
-import { lotteries } from "@/data/mockData";
+import {useLotteries} from "@/LotteriesContext.tsx";
 
 const LotteriesList = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const { lotteries } = useLotteries()
   
   const filteredLotteries = lotteries.filter((lottery) =>
     lottery.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

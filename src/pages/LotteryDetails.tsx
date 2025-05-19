@@ -4,7 +4,6 @@ import { useParams } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Info, Ticket as TicketIcon, Timer } from "lucide-react";
-import { lotteries } from "@/data/mockData";
 
 // Import our new components
 import LotteryHeader from "@/components/lottery/LotteryHeader";
@@ -13,10 +12,12 @@ import LotteryInfo from "@/components/lottery/LotteryInfo";
 import BuyTicketTab from "@/components/lottery/BuyTicketTab";
 import LotteryRules from "@/components/lottery/LotteryRules";
 import MiniGamesList from "@/components/lottery/MiniGamesList";
+import {Lottery, useLotteries} from "@/LotteriesContext.tsx";
 
 const LotteryDetails = () => {
   const { id } = useParams();
-  const [lottery, setLottery] = useState<any>(null);
+  const { lotteries } = useLotteries();
+  const [lottery, setLottery] = useState<Lottery>(null);
   
   useEffect(() => {
     const foundLottery = lotteries.find((l) => l.id === Number(id));
