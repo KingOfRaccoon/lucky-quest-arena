@@ -1,15 +1,34 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Trophy, Star } from "lucide-react";
 import { miniGames } from "@/data/mockData";
+import WordleGame from "@/components/mini-games/WordleGame";
 
 const MiniGames = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const params = useParams();
+  const gameId = params.id;
+  
+  // Check if we should show a specific game
+  if (gameId && Number(gameId) === 4) {
+    return (
+      <BaseLayout>
+        <section className="mb-12">
+          <h1 className="text-3xl font-bold mb-2">Wordle</h1>
+          <p className="text-gray-500 mb-6">
+            Угадайте слово из 5 букв за 6 попыток
+          </p>
+          
+          <WordleGame />
+        </section>
+      </BaseLayout>
+    );
+  }
   
   // This is a placeholder as we only have one category in the mock data
   // In a real app, you would filter by category

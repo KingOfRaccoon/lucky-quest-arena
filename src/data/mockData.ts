@@ -1,4 +1,3 @@
-
 export const lotteries = [
   {
     id: 1,
@@ -102,6 +101,15 @@ export const miniGames = [
     bonusReward: "20-150 бонусных монет",
     averagePlayTime: "1 минута",
     popularity: 4.7,
+  },
+  {
+    id: 4,
+    name: "Wordle",
+    description: "Угадайте слово из 5 букв за 6 попыток",
+    image: "/placeholder.svg",
+    bonusReward: "30-150 бонусных монет",
+    averagePlayTime: "3 минуты",
+    popularity: 4.9,
   },
 ];
 
