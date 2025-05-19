@@ -16,7 +16,7 @@ const MiniGamesList = () => {
           <MiniGameCard 
             key={game.id} 
             id={game.id}
-            title={game.name} // Changed from name to title to match MiniGameCard props
+            title={game.name}
             description={game.description} 
             image={game.image} 
           />
@@ -24,7 +24,11 @@ const MiniGamesList = () => {
       </div>
       
       <div className="text-center mt-6">
-        <Button variant="outline" asChild>
+        <Button 
+          variant="outline" 
+          className="border-primary text-primary hover:bg-primary hover:text-white" 
+          asChild
+        >
           <Link to="/mini-games">
             Все мини-игры
             <ArrowRight className="ml-2 h-4 w-4" />

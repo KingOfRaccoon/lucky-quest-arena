@@ -26,7 +26,11 @@ const MiniGameCard = ({ id, title, description, image }: MiniGameCardProps) => {
         <p className="text-sm text-muted-foreground mb-4">
           {description}
         </p>
-        <Button className="w-full" asChild>
+        <Button 
+          variant="outline" 
+          className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+          asChild
+        >
           <Link to={`/mini-game/${id}`}>
             Играть
             <ChevronRight size={16} className="ml-1" />
