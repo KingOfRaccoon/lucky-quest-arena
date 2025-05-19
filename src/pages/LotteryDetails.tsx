@@ -21,7 +21,8 @@ import {
   ChevronRight,
   ThumbsUp,
   ChevronLeft,
-  ArrowRight
+  ArrowRight,
+  Calendar
 } from "lucide-react";
 import { lotteries } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
@@ -220,6 +221,14 @@ const LotteryDetails = () => {
                   </CardHeader>
                   <CardContent className="py-3">
                     <p className="text-2xl font-bold">{lottery.jackpot} {typeof lottery.jackpot === 'number' ? '₽' : ''}</p>
+                    <div className="mt-2">
+                      <Button variant="ghost" size="sm" className="px-0 h-7" asChild>
+                        <Link to={`/lottery/results/${id}`} className="text-primary flex items-center">
+                          <Calendar className="mr-1 h-4 w-4" />
+                          <span>История результатов</span>
+                        </Link>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
