@@ -105,34 +105,55 @@ const BattlePass = () => {
           
           <TabsContent value="rewards" className="mt-0">
             <div className="bg-muted/30 rounded-lg p-8 mb-8 overflow-x-auto">
-              <div className="flex min-w-[800px]">
+              <div className="flex min-w-[800px] relative">
+                {/* Прогресс линии (рисуются ПОД уровнями) */}
+                <div className="absolute top-6 left-0 right-0 h-0.5 z-0">
+                  {battlePassLevels.map((level, index) => {
+                    // Не рисуем линию для первого уровня
+                    if (index === 0) return null;
+                    
+                    const isCompleted = level.level <= user.battlePassLevel;
+                    const isCurrentLevelProgress = level.level === user.battlePassLevel + 1;
+                    
+                    const leftPos = `${(index - 0.5) * (100 / (battlePassLevels.length - 1))}%`;
+                    const width = `${100 / (battlePassLevels.length - 1)}%`;
+                    
+                    return (
+                      <div 
+                        key={`line-${level.level}`}
+                        className="absolute h-full"
+                        style={{ 
+                          left: leftPos, 
+                          width: width
+                        }}
+                      >
+                        {/* Базовая линия (серая) */}
+                        <div className="absolute top-0 left-0 right-0 h-full bg-gray-300"></div>
+                        
+                        {/* Прогресс линия */}
+                        {(isCompleted || isCurrentLevelProgress) && (
+                          <div 
+                            className="absolute top-0 left-0 h-full bg-primary transition-all duration-300"
+                            style={{ 
+                              width: isCurrentLevelProgress ? `${progress}%` : '100%' 
+                            }}
+                          ></div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Уровни (рисуются НАД линиями) */}
                 {battlePassLevels.map((level, index) => {
                   const isCompleted = level.level <= user.battlePassLevel;
                   const isCurrent = level.level === user.battlePassLevel + 1;
                   
                   return (
-                    <div key={level.level} className="flex-1 px-2">
+                    <div key={level.level} className="flex-1 px-2 z-10">
                       <div className="relative">
-                        {index > 0 && (
-                          <div className="absolute h-0.5 top-6 -left-[calc(50%-16px)] w-[calc(100%-32px)]">
-                            <div 
-                              className={`h-full ${
-                                isCompleted 
-                                  ? 'bg-primary' 
-                                  : index <= user.battlePassLevel
-                                    ? 'bg-primary'
-                                    : 'bg-gray-300'
-                              }`}
-                              style={{
-                                width: index === user.battlePassLevel + 1 
-                                  ? `${progress}%` 
-                                  : '100%'
-                              }}
-                            ></div>
-                          </div>
-                        )}
                         <div 
-                          className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto border-2 ${
+                          className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto border-2 shadow-md relative z-10 bg-white ${
                             isCompleted 
                               ? 'bg-primary border-primary text-white' 
                               : isCurrent
