@@ -8,28 +8,31 @@ import BattlePass from "@/pages/BattlePass";
 import BuyCurrency from "@/pages/BuyCurrency";
 import NotFound from "@/pages/NotFound";
 import WordleGamePage from "@/pages/WordleGame";
-import { Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
+import {Routes, Route} from "react-router-dom";
+import {Toaster} from "sonner";
+import {BalanceProvider} from "@/BalanceContext.tsx";
 
 function App() {
-  return (
-    <div className="App">
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/lotteries" element={<LotteriesList />} />
-        <Route path="/lottery/:id" element={<LotteryDetails />} />
-        <Route path="/results" element={<LotteryResults />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="/mini-games" element={<MiniGames />} />
-        <Route path="/mini-game/4" element={<WordleGamePage />} />
-        <Route path="/mini-game/:id" element={<MiniGames />} />
-        <Route path="/battle-pass" element={<BattlePass />} />
-        <Route path="/buy-currency" element={<BuyCurrency />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Toaster />
-    </div>
-  );
+    return (
+        <div className="App">
+            <BalanceProvider>
+                <Routes>
+                    <Route path="/" element={<Index/>}/>
+                    <Route path="/lotteries" element={<LotteriesList/>}/>
+                    <Route path="/lottery/:id" element={<LotteryDetails/>}/>
+                    <Route path="/results" element={<LotteryResults/>}/>
+                    <Route path="/profile" element={<UserProfile/>}/>
+                    <Route path="/mini-games" element={<MiniGames/>}/>
+                    <Route path="/mini-game/4" element={<WordleGamePage/>}/>
+                    <Route path="/mini-game/:id" element={<MiniGames/>}/>
+                    <Route path="/battle-pass" element={<BattlePass/>}/>
+                    <Route path="/buy-currency" element={<BuyCurrency/>}/>
+                    <Route path="*" element={<NotFound/>}/>
+                </Routes>
+            </BalanceProvider>
+            <Toaster/>
+        </div>
+    );
 }
 
 export default App;

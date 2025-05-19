@@ -67,7 +67,7 @@ const Index = () => {
                     <Ticket className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/20" asChild>
+                <Button variant="outline" size="lg" className="bg-primary text-white hover:bg-primary/90" asChild>
                   <Link to="/battle-pass">
                     Battle Pass
                     <Crown className="ml-2 h-5 w-5" />
@@ -154,7 +154,7 @@ const Index = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" asChild>
+              <Button variant="outline" className="w-full" asChild>
                 <Link to="/battle-pass">
                   Просмотреть Battle Pass
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -259,7 +259,7 @@ const Index = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" asChild>
+                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
                       <Link to={`/lottery/${lottery.id}`}>
                         Подробнее
                       </Link>
@@ -313,7 +313,7 @@ const Index = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" asChild>
+                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
                       <Link to={`/mini-game/${game.id}`}>
                         Играть
                       </Link>

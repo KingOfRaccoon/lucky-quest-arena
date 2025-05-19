@@ -6,14 +6,25 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Trophy, Ticket, Coins, Crown, Clock, Calendar, ChevronRight } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useBalance } from "@/use-balance";
+import {
+  ArrowRight,
+  Trophy,
+  Ticket,
+  Coins,
+  Crown,
+  Clock,
+  Calendar,
+  ChevronRight,
+  UserRound
+} from "lucide-react";
 import { user, lotteries } from "@/data/mockData";
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { balance, bonusBalance, addBalance } = useBalance();
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(500);
   
   // Тестовые данные для билетов пользователя
   const userTickets = [
@@ -102,7 +113,7 @@ const UserProfile = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center">
-              <ArrowRight className="h-4 w-4 mr-2 text-primary" />
+              <UserRound className="h-4 w-4 mr-2 text-primary" />
               Профиль пользователя
             </CardTitle>
           </CardHeader>
@@ -120,11 +131,11 @@ const UserProfile = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Баланс:</span>
-                <span className="font-medium">{user.balance} ₽</span>
+                <span className="font-medium">{balance} ₽</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Бонусы:</span>
-                <span className="font-medium">{user.bonusBalance} бонусов</span>
+                <span className="font-medium">{bonusBalance} бонусов</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">VIP-статус:</span>
@@ -144,11 +155,33 @@ const UserProfile = () => {
               </div>
             </div>
             
-            <div className="mt-4 space-x-2">
+            <div className="mt-4 space-y-2">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setShowDeposit(true)}>
+                Пополнить баланс
+              </Button>
               <Button variant="outline" size="sm" className="w-full">
                 Редактировать профиль
               </Button>
             </div>
+            
+            {showDeposit && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+                <div className="bg-white rounded shadow-lg p-6 min-w-[300px]">
+                  <h2 className="text-lg font-bold mb-4">Пополнить баланс</h2>
+                  <input
+                    type="number"
+                    min={1}
+                    value={depositAmount}
+                    onChange={e => setDepositAmount(Number(e.target.value))}
+                    className="border rounded px-2 py-1 w-full mb-4"
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={() => { addBalance(depositAmount); setShowDeposit(false); }}>Пополнить</Button>
+                    <Button variant="outline" onClick={() => setShowDeposit(false)}>Отмена</Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
         
@@ -193,12 +226,14 @@ const UserProfile = () => {
                 </div>
               </div>
             ))}
-            <Button className="w-full mt-4" asChild>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full mt-4" asChild>
               <Link to="/lotteries">
                 Купить еще билеты
               </Link>
             </Button>
-          </CardContent>
+          </CardFooter>
         </Card>
         
         <Card>
@@ -240,13 +275,14 @@ const UserProfile = () => {
                 </div>
               ))}
             </div>
-            
+          </CardContent>
+          <CardFooter>
             <Button variant="outline" className="w-full mt-4" asChild>
               <Link to="/lotteries">
                 Все лотереи
               </Link>
             </Button>
-          </CardContent>
+          </CardFooter>
         </Card>
       </div>
       

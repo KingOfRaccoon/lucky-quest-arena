@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Search, Ticket, TrendingUp, Users, Zap } from "lucide-react";
+import { Clock, Search, TrendingUp, Users, Zap } from "lucide-react";
 import { lotteries } from "@/data/mockData";
 
 const LotteriesList = () => {
@@ -113,7 +112,7 @@ const LotteriesList = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" asChild>
+                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
                       <Link to={`/lottery/${lottery.id}`}>
                         Подробнее
                       </Link>
@@ -169,7 +168,7 @@ const LotteriesList = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" asChild>
+                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
                       <Link to={`/lottery/${lottery.id}`}>
                         Подробнее
                       </Link>
@@ -225,7 +224,7 @@ const LotteriesList = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" asChild>
+                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
                       <Link to={`/lottery/${lottery.id}`}>
                         Подробнее
                       </Link>
@@ -249,8 +248,10 @@ const LotteriesList = () => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full md:w-auto">
               <div className="bg-white p-4 rounded-lg shadow-sm flex">
-                <div className="mr-4 bg-primary/10 p-2 rounded-full">
-                  <Zap className="h-5 w-5 text-primary" />
+                <div className="mr-4 flex items-center justify-center">
+                  <span className="bg-primary/10 p-2 rounded-full flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-primary" />
+                  </span>
                 </div>
                 <div>
                   <h3 className="font-medium mb-1">Быстрые розыгрыши</h3>
@@ -260,8 +261,10 @@ const LotteriesList = () => {
                 </div>
               </div>
               <div className="bg-white p-4 rounded-lg shadow-sm flex">
-                <div className="mr-4 bg-primary/10 p-2 rounded-full">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+                <div className="mr-4 flex items-center justify-center">
+                  <span className="bg-primary/10 p-2 rounded-full flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </span>
                 </div>
                 <div>
                   <h3 className="font-medium mb-1">Высокие шансы</h3>
