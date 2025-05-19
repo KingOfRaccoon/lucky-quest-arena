@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, Gift, Crown, Trophy, Clock, ArrowRight } from "lucide-react";
+import { Ticket, Gift, Crown, Trophy, Clock, ArrowRight, User } from "lucide-react";
 import { lotteries, miniGames, user, battlePassLevels, dailyTasks } from "@/data/mockData";
 
 const Index = () => {
@@ -346,13 +345,13 @@ const Index = () => {
             <Button size="lg" className="game-button" asChild>
               <Link to="/lotteries">
                 <Ticket className="mr-2 h-5 w-5" />
-                Начать играть
+                <span>Начать играть</span>
               </Link>
             </Button>
             <Button variant="outline" size="lg" className="game-button" asChild>
               <Link to="/profile">
-                <User size={16} className="mr-2" />
-                Мой профиль
+                <User className="mr-2 h-5 w-5" />
+                <span>Мой профиль</span>
               </Link>
             </Button>
           </div>
