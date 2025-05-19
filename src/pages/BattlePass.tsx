@@ -107,7 +107,7 @@ const BattlePass = () => {
             <div className="bg-muted/30 rounded-lg p-8 mb-8 overflow-x-auto">
               <div className="flex min-w-[800px] relative">
                 {/* Прогресс линии (рисуются ПОД уровнями) */}
-                <div className="absolute top-6 left-0 right-0 h-0.5 z-0">
+                <div className="absolute top-6 left-0 right-0 h-1 z-0">
                   {battlePassLevels.map((level, index) => {
                     // Не рисуем линию для первого уровня
                     if (index === 0) return null;
@@ -115,6 +115,7 @@ const BattlePass = () => {
                     const isCompleted = level.level <= user.battlePassLevel;
                     const isCurrentLevelProgress = level.level === user.battlePassLevel + 1;
                     
+                    // Adjust left position and width to avoid overlapping with circles
                     const leftPos = `${(index - 0.5) * (100 / (battlePassLevels.length - 1))}%`;
                     const width = `${100 / (battlePassLevels.length - 1)}%`;
                     
@@ -153,15 +154,21 @@ const BattlePass = () => {
                     <div key={level.level} className="flex-1 px-2 z-10">
                       <div className="relative">
                         <div 
-                          className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto border-2 shadow-md relative z-10 bg-white ${
+                          className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto border-2 shadow-md relative z-10 ${
                             isCompleted 
-                              ? 'bg-primary border-primary text-white' 
+                              ? 'bg-primary border-primary' 
                               : isCurrent
-                                ? 'border-primary text-primary'
-                                : 'border-gray-300 text-gray-400'
+                                ? 'border-primary text-primary bg-white'
+                                : 'border-gray-300 text-gray-400 bg-white'
                           }`}
                         >
-                          {level.level}
+                          <span className={`${
+                            isCompleted 
+                              ? 'text-white font-bold' 
+                              : ''
+                          }`}>
+                            {level.level}
+                          </span>
                         </div>
                       </div>
                       
