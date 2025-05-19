@@ -25,8 +25,7 @@ const MiniGamesList = () => {
       
       <div className="text-center mt-6">
         <Button 
-          variant="outline" 
-          className="border-primary text-primary hover:bg-primary hover:text-white" 
+          className="bg-primary text-white hover:bg-primary/90" 
           asChild
         >
           <Link to="/mini-games">

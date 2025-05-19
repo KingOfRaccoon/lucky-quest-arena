@@ -44,7 +44,7 @@ const MiniGames = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {filteredGames.map((game) => (
-            <Card key={game.id} className="lottery-card overflow-hidden">
+            <Card key={game.id} className="lottery-card overflow-hidden flex flex-col h-full">
               <div className="aspect-video bg-muted relative">
                 <img 
                   src={game.image} 
@@ -77,8 +77,8 @@ const MiniGames = () => {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button variant="default" className="w-full game-button" asChild>
+              <CardFooter className="mt-auto">
+                <Button className="w-full bg-primary text-white hover:bg-primary/90 game-button" asChild>
                   <Link to={`/mini-game/${game.id}`}>
                     Играть
                   </Link>

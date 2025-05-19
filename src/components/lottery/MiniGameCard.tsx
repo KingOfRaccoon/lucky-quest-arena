@@ -13,7 +13,7 @@ interface MiniGameCardProps {
 
 const MiniGameCard = ({ id, title, description, image }: MiniGameCardProps) => {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden flex flex-col h-full">
       <div className="aspect-video bg-muted relative">
         <img 
           src={image} 
@@ -21,14 +21,13 @@ const MiniGameCard = ({ id, title, description, image }: MiniGameCardProps) => {
           className="w-full h-full object-cover"
         />
       </div>
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 flex flex-col flex-1">
         <h3 className="font-semibold mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-muted-foreground mb-4 flex-grow">
           {description}
         </p>
         <Button 
-          variant="outline" 
-          className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+          className="w-full bg-primary text-white hover:bg-primary/90 mt-auto"
           asChild
         >
           <Link to={`/mini-game/${id}`}>
