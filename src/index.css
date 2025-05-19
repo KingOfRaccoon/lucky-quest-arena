@@ -92,7 +92,7 @@
 }
 
 .glass-card {
-  @apply bg-white/80 backdrop-blur-sm border border-white/20 shadow-lg;
+  @apply bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg;
 }
 
 .countdown {
@@ -126,3 +126,4 @@
 .mini-game {
   @apply rounded-lg overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg;
 }
+
