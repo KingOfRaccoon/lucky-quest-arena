@@ -21,15 +21,29 @@ const BattlePass = () => {
   const { dailyTasks } = useDailyTasks();
   const { weeklyTasks } = useWeeklyTasks();
 
-  // Calculate current level progress
-  const currentLevel = battlePassLevels.find(level => level.level === user.battlePassLevel);
-  const nextLevel = battlePassLevels.find(level => level.level === user.battlePassLevel + 1);
+  // Initialize values
+  const userBattlePassLevel = user?.battlepass_lvl || 0;
+
+  // Для XP и прогресса нам нужно сделать имитацию, так как в новой структуре user нет battlePassXp
+  // Мы будем использовать первое значение XP текущего уровня + 35% до следующего уровня
+  const currentLevel = battlePassLevels.find(level => level.level === userBattlePassLevel);
+  const nextLevel = battlePassLevels.find(level => level.level === userBattlePassLevel + 1);
+
+  // Если есть следующий уровень, вычисляем прогресс (35% по умолчанию)
+  // Если следующего уровня нет, значит пользователь достиг максимума
+  const userXp = currentLevel?.xpRequired || 0;
+  const xpToNextLevel = nextLevel
+    ? (nextLevel.xpRequired - (currentLevel?.xpRequired || 0))
+    : 0;
+  const additionalXp = xpToNextLevel * 0.35; // 35% прогресса к следующему уровню
+  const userTotalXp = userXp + additionalXp;
+
   const progress = nextLevel
-    ? ((user.battlePassXp - (currentLevel?.xpRequired || 0)) / 
+    ? ((userTotalXp - (currentLevel?.xpRequired || 0)) /
        (nextLevel.xpRequired - (currentLevel?.xpRequired || 0))) * 100
     : 100;
 
-  // Function to claim rewards
+  // Функция получения наград
   const handleClaimReward = () => {
     toast({
       title: "Награда получена!",
@@ -53,11 +67,11 @@ const BattlePass = () => {
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span>Текущий уровень:</span>
-                  <span className="font-bold">{user.battlePassLevel}</span>
+                  <span className="font-bold">{userBattlePassLevel}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span>Опыт:</span>
-                  <span className="font-bold">{user.battlePassXp} / {nextLevel?.xpRequired || "MAX"}</span>
+                  <span className="font-bold">{userTotalXp} / {nextLevel?.xpRequired || "MAX"}</span>
                 </div>
                 <Progress value={progress} className="h-2 bg-white/20 mb-2" />
                 {nextLevel && (
@@ -67,7 +81,7 @@ const BattlePass = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <Card className="bg-white/10 backdrop-blur-sm text-white border-0">
                 <CardHeader className="pb-2">
@@ -77,7 +91,7 @@ const BattlePass = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold mb-2">{user.completedQuests}</div>
+                  <div className="text-3xl font-bold mb-2">{user?.completedQuests || -1}</div>
                   <CardDescription className="text-white/70">из {dailyTasks.length + weeklyTasks.length}</CardDescription>
                 </CardContent>
               </Card>
@@ -89,7 +103,7 @@ const BattlePass = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold mb-2">{user.battlePassLevel}</div>
+                  <div className="text-3xl font-bold mb-2">{userBattlePassLevel}</div>
                   <CardDescription className="text-white/70">из {battlePassLevels.length}</CardDescription>
                 </CardContent>
               </Card>
@@ -108,58 +122,73 @@ const BattlePass = () => {
               <LayoutList className="mr-2 h-4 w-4" /> Задания
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="rewards" className="mt-0">
             <div className="bg-muted/30 rounded-lg p-8 mb-8 overflow-x-auto">
-              <div className="flex min-w-[800px] relative">
+              <div className="flex min-w-[800px] relative pb-4">
                 {/* Прогресс линии (рисуются ПОД уровнями) */}
-                <div className="absolute top-6 left-0 right-0 h-1 z-0">
-                  {battlePassLevels.map((level, index) => {
-                    // Не рисуем линию для первого уровня
-                    if (index === 0) return null;
-                    
-                    const isCompleted = level.level <= user.battlePassLevel;
-                    const isCurrentLevelProgress = level.level === user.battlePassLevel + 1;
-                    
-                    // Adjust left position and width to avoid overlapping with circles
-                    const leftPos = `${(index - 0.5) * (100 / (battlePassLevels.length - 1))}%`;
-                    const width = `${100 / (battlePassLevels.length - 1)}%`;
-                    
+                <div className="absolute top-6 left-12 right-12 h-1 z-0">
+                  {/* Рисуем линии для всех уровней */}
+                  {battlePassLevels.map((level, index, array) => {
+                    // Для каждого уровня, кроме последнего, рисуем линию от него к следующему
+                    if (index === array.length - 1) return null; // Не рисуем линию после последнего уровня
+
+                    const nextLevel = array[index + 1];
+                    const isCompleted = level.level < userBattlePassLevel;
+                    const isCurrentLevelProgress = level.level === userBattlePassLevel;
+
+                    // Рассчитываем позицию и ширину линии между текущим и следующим уровнем
+                    const leftPos = `${(index) * (100 / (array.length - 1))}%`;
+                    const width = `${100 / (array.length - 1)}%`;
+
                     return (
-                      <div 
-                        key={`line-${level.level}`}
+                      <div
+                        key={`line-${level.level}-to-${nextLevel.level}`}
                         className="absolute h-full"
-                        style={{ 
-                          left: leftPos, 
+                        style={{
+                          left: leftPos,
                           width: width
                         }}
                       >
                         {/* Базовая линия (серая) */}
                         <div className="absolute top-0 left-0 right-0 h-full bg-gray-300"></div>
-                        
+
                         {/* Прогресс линия */}
                         {(isCompleted || isCurrentLevelProgress) && (
-                          <div 
+                          <div
                             className="absolute top-0 left-0 h-full bg-primary transition-all duration-300"
-                            style={{ 
-                              width: isCurrentLevelProgress ? `${progress}%` : '100%' 
+                            style={{
+                              width: isCompleted ? '100%' : (isCurrentLevelProgress ? `${progress}%` : '0%')
                             }}
                           ></div>
                         )}
                       </div>
                     );
                   })}
+
+                  {/* Добавляем линию для последнего уровня (если пользователь достиг максимума) */}
+                  {battlePassLevels.length > 0 && userBattlePassLevel >= battlePassLevels.length && (
+                    <div
+                      className="absolute h-full"
+                      style={{
+                        left: `${(battlePassLevels.length - 1) * (100 / (battlePassLevels.length - 1))}%`,
+                        width: `${100 / (battlePassLevels.length - 1)}%`
+                      }}
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-full bg-primary"></div>
+                    </div>
+                  )}
                 </div>
-                
+
                 {/* Уровни (рисуются НАД линиями) */}
                 {battlePassLevels.map((level, index) => {
-                  const isCompleted = level.level <= user.battlePassLevel;
-                  const isCurrent = level.level === user.battlePassLevel + 1;
-                  
+                  const isCompleted = level.level <= userBattlePassLevel;
+                  const isCurrent = level.level === userBattlePassLevel + 1;
+
                   return (
                     <div key={level.level} className="flex-1 px-2 z-10">
                       <div className="relative">
-                        <div 
+                        <div
                           className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto border-2 shadow-md relative z-10 ${
                             isCompleted 
                               ? 'bg-primary border-primary' 
@@ -177,7 +206,7 @@ const BattlePass = () => {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className={`mt-4 p-3 rounded-lg ${
                         isCompleted 
                           ? 'bg-primary/10' 
@@ -196,7 +225,7 @@ const BattlePass = () => {
                         <div className="text-center text-xs text-muted-foreground mb-3">
                           {level.xpRequired} XP
                         </div>
-                        
+
                         {isCompleted ? (
                           <Button variant="default" size="sm" className="w-full" disabled>
                             Получено
@@ -204,15 +233,15 @@ const BattlePass = () => {
                         ) : isCurrent ? (
                           <div className="space-y-2">
                             <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className="h-full bg-primary"
                                 style={{ width: `${progress}%` }}
                               ></div>
                             </div>
-                            <Button 
-                              variant="default" 
-                              size="sm" 
-                              className="w-full" 
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-full"
                               onClick={handleClaimReward}
                               disabled={progress < 100}
                             >
@@ -230,7 +259,7 @@ const BattlePass = () => {
                 })}
               </div>
             </div>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -254,7 +283,7 @@ const BattlePass = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="tasks" className="mt-0">
             <Card className="mb-8">
               <CardHeader>
@@ -276,16 +305,16 @@ const BattlePass = () => {
                           </Badge>
                         </div>
                       </div>
-                      
+
                       <Progress value={(task.progress / task.total) * 100} className="h-2 mb-3" />
-                      
+
                       <div className="flex justify-between items-center">
                         <div className="flex items-center">
                           <Gift className="h-4 w-4 text-primary mr-1" />
                           <span className="text-sm font-medium">{task.reward}</span>
                         </div>
-                        
-                        <Button 
+
+                        <Button
                           size="sm"
                           variant={task.completed ? "default" : "outline"}
                           disabled={!task.completed}
@@ -320,16 +349,16 @@ const BattlePass = () => {
                           </Badge>
                         </div>
                       </div>
-                      
+
                       <Progress value={(task.progress / task.total) * 100} className="h-2 mb-3" />
-                      
+
                       <div className="flex justify-between items-center">
                         <div className="flex items-center">
                           <Gift className="h-4 w-4 text-primary mr-1" />
                           <span className="text-sm font-medium">{task.reward}</span>
                         </div>
-                        
-                        <Button 
+
+                        <Button
                           size="sm"
                           variant={task.completed ? "default" : "outline"}
                           disabled={!task.completed}
