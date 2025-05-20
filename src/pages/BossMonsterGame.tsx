@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,6 +22,7 @@ interface Monster {
   game_id: number;
   type: number;
   power: number;
+  image_url: string;
 }
 
 interface GameParams {
@@ -38,6 +39,7 @@ interface GameResults extends GameParams {
 
 const BossMonsterGame = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useUser();
   const { gameId } = useParams();
@@ -49,6 +51,38 @@ const BossMonsterGame = () => {
   const [selectedHeroes, setSelectedHeroes] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Функция для корректного выхода из игры
+  const exitGame = useCallback(() => {
+    // Сбросить все состояния игры
+    setGameState("initial");
+    setGameParams(null);
+    setGameResults(null);
+    setSelectedHeroes([]);
+    setTimeLeft("");
+
+    // Перейти на страницу мини-игр
+    navigate("/?tab=minigames");
+  }, [navigate]);
+
+  // Функция для проверки необходимости принудительного начала с начального экрана
+  const resetGameIfNavigatedTo = useCallback(() => {
+    // Если приходим с другой страницы, а не с результатов игры,
+    // и gameId в URL отсутствует - сбрасываем игру до начального экрана
+    const isDirectNavigation = !location.state || !location.state.fromResults;
+
+    if (isDirectNavigation && !gameId) {
+      setGameState("initial");
+      setGameParams(null);
+      setGameResults(null);
+      setSelectedHeroes([]);
+    }
+  }, [gameId, location.state]);
+
+  // Отслеживаем изменение URL и при необходимости сбрасываем игру
+  useEffect(() => {
+    resetGameIfNavigatedTo();
+  }, [location.pathname, resetGameIfNavigatedTo]);
 
   const startGame = async () => {
     setIsLoading(true);
@@ -81,12 +115,39 @@ const BossMonsterGame = () => {
 
       // Вычисляем оставшееся время
       const endTime = new Date(data.end_time).getTime();
-      console.log(endTime);
-      updateTimeLeft(endTime);
+      const now = new Date().getTime();
+      const timeRemaining = endTime - now;
 
-      // Устанавливае�� таймер для обновления оставшегося времени
+      console.log('Remaining time (ms):', timeRemaining);
+
+      // Если до окончания игры осталось менее 5 секунд
+      if (timeRemaining < 5000) {
+        toast({
+          title: "Внимание",
+          description: "До конца битвы осталось мало времени, вы будете участвовать в следующей.",
+          duration: 5000,
+        });
+
+        // Время окончания + 3 секунды
+        const nextGameStartTime = endTime + 3000;
+
+        // Устанавливаем таймер до следующей игры
+        const intervalId = setInterval(() => {
+          const remaining = updateTimeLeft(nextGameStartTime);
+          if (remaining <= 0) {
+            clearInterval(intervalId);
+
+            // Автоматически запускаем новую игру
+            startGame();
+          }
+        }, 1000);
+
+        return () => clearInterval(intervalId);
+      }
+
+      // Устанавливаем таймер для обновления оставшегося времени
       const intervalId = setInterval(() => {
-        const remaining = updateTimeLeft(endTime);
+        const remaining = updateTimeLeft(endTime + 5000);
         if (remaining <= 0) {
           clearInterval(intervalId);
           fetchGameResults(id);
@@ -204,6 +265,19 @@ const BossMonsterGame = () => {
     }
   }, [gameId]);
 
+  // Функция для получения текстового описания типа монстра
+  const getMonsterTypeString = (typeNum: number): string => {
+    switch (typeNum) {
+      case 1: return "слабый";
+      case 2: return "сильный";
+      case 3: return "неуклюжий";
+      case 4: return "ловкий";
+      case 5: return "глупый";
+      case 6: return "умный";
+      default: return "неизвестный";
+    }
+  };
+
   // Рендеринг начального экрана
   if (gameState === "initial") {
     return (
@@ -227,7 +301,7 @@ const BossMonsterGame = () => {
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? "Загрузка..." : "Начать и��ру"}
+              {isLoading ? "Загрузка..." : "Начать игру"}
             </Button>
           </div>
         </div>
@@ -240,7 +314,12 @@ const BossMonsterGame = () => {
     return (
       <BaseLayout>
         <div className="container mx-auto p-4">
-          <h1 className="text-2xl font-bold mb-6">Босс Монстр - Битва</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Босс Монстр - Битва</h1>
+            <Button variant="outline" size="sm" onClick={exitGame}>
+              Выйти из игры
+            </Button>
+          </div>
 
           <div className="mb-4 p-2 bg-muted rounded-md text-center">
             <p className="font-medium">До окончания битвы осталось: {timeLeft}</p>
@@ -258,7 +337,7 @@ const BossMonsterGame = () => {
                   >
                     <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
                       <img
-                        src={hero.image_url || '/placeholder.svg'}
+                        src={'/images/heros/' + hero.image_url || '/placeholder.svg'}
                         alt={hero.name}
                         className="w-full h-full object-cover"
                       />
@@ -290,7 +369,7 @@ const BossMonsterGame = () => {
                   <Card key={monster.id} className="p-2">
                     <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
                       <img
-                        src={`/monster-type-${monster.type}.svg`}
+                        src={`/images/monstres/monster_${monster.type}.jpg`}
                         alt={`Монстр #${monster.id}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -300,10 +379,14 @@ const BossMonsterGame = () => {
                       />
                     </div>
                     <h3 className="font-medium text-sm">Монстр #{monster.id}</h3>
-                    <div className="mt-2 text-sm">
+                    <div className="mt-2 text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Тип:</span>
+                        <span className="font-medium">{getMonsterTypeString(monster.type)}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Сила:</span>
-                        <span>???</span>
+                        <span>{monster.power}</span>
                       </div>
                     </div>
                   </Card>
@@ -359,7 +442,7 @@ const BossMonsterGame = () => {
                     >
                       <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
                         <img
-                          src={hero.image_url || '/placeholder.svg'}
+                          src={'/images/heros/'+ hero.image_url || '/placeholder.svg'}
                           alt={hero.name}
                           className="w-full h-full object-cover"
                         />
@@ -399,7 +482,7 @@ const BossMonsterGame = () => {
                   >
                     <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
                       <img
-                        src={`/monster-type-${monster.type}.svg`}
+                        src={`/images/monstres/monster_${monster.type}.jpg`}
                         alt={`Монстр #${monster.id}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -410,6 +493,10 @@ const BossMonsterGame = () => {
                     </div>
                     <h3 className="font-medium text-sm">Монстр #{monster.id}</h3>
                     <div className="mt-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Тип:</span>
+                        <span className="font-medium">{getMonsterTypeString(monster.type)}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Сила:</span>
                         <span>{monster.power}</span>
@@ -426,19 +513,29 @@ const BossMonsterGame = () => {
             </div>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-4">
             <Button
               onClick={() => {
                 setGameState("initial");
                 setSelectedHeroes([]);
                 setGameParams(null);
                 setGameResults(null);
-                navigate("/?tab=minigames");
+                // Переходим на начальный экран игры, но удаляем ID игры из URL
+                navigate("/mini-games/5", { replace: true });
               }}
               size="lg"
               className="px-8"
             >
               Играть снова
+            </Button>
+
+            <Button
+              onClick={exitGame}
+              variant="outline"
+              size="lg"
+              className="px-8"
+            >
+              Выйти в меню
             </Button>
           </div>
         </div>

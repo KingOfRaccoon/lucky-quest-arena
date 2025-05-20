@@ -85,7 +85,7 @@ const UserProfile = () => {
         description: `Покупка билета «${lotteryName}»`,
         // Используем цену лотереи, если доступна, иначе случайное значение
         amount: -(ticket.lottery?.price_currency || Math.floor(Math.random() * 300) + 100),
-        currency: "RUB" as const // Предполагаем, что билеты пок��паются за валюту
+        currency: "RUB" as const // Предполагаем, что билеты покупаются за валюту
       };
 
       // Для выигрышных билетов добавляем транзакцию выигрыша
@@ -587,10 +587,22 @@ const UserProfile = () => {
                         <div className="text-sm text-muted-foreground">
                           Розыгрыш: {new Date(ticket.drawDate).toLocaleDateString('ru-RU')}
                         </div>
-                        {ticket.winAmount && (
-                          <div className="font-semibold text-green-600">{ticket.winAmount} кредитов</div>
-                        )}
                       </div>
+
+                      {/* Отображение информации о выигрыше, если билет выигрышный */}
+                      {ticket.status === "won" && (
+                        <div className="mt-3 p-2 bg-green-50 rounded-md border border-green-200">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Выигрыш:</span>
+                            <span className="font-semibold text-green-600">{ticket.winAmount} кредитов</span>
+                          </div>
+                          {ticket.tier_name && (
+                            <div className="mt-1 text-sm">
+                              <span className="text-gray-600">{ticket.tier_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

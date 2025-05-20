@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useState, useEffect, ReactNode, useMemo} from "react";
 import {lotteries as mockLotteries} from "@/data/mockData";
-import { API_BASE_URL, get, post } from "@/services/api.ts";
+import { get, post } from "@/services/api.ts";
 
 // Новый тип для лотереи согласно формату API
 export type Lottery = {
@@ -32,10 +32,11 @@ export type GroupedLottery = {
 export type Ticket = {
     purchase_date: string;
     id: number;
-    reward_id: number | null;
+    reward: number | null;
     draw_id: number;
     value_str: string;
     profile_id: number;
+    tier_name: string;
 };
 
 // Тип для билета с дополнительной информацией
@@ -175,7 +176,7 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
             setTicketsLoading(true);
             setTicketsError(null);
 
-            // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+            // Заменяем прямой вызов fetch на вызов через api-сервис с логирование��
             const data = await post<{ tickets: Ticket[] }>('/tickets/list', { profile_id: profileId });
 
             // Обогащаем билеты информацией о лотерее
@@ -184,16 +185,16 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
                 const now = new Date();
                 const endDate = lottery ? new Date(lottery.end_date) : null;
 
-                // Определяем статус б��лета
+                // Определяем статус билета
                 let status: "active" | "won" | "completed" = "completed";
                 if (endDate && endDate > now) {
                     status = "active";
-                } else if (ticket.reward_id !== null) {
+                } else if (ticket.reward !== null) {
                     status = "won";
                 }
 
-                // Генерируем случайный выигрыш для выигрышных билетов
-                const winAmount = status === "won" ? Math.floor(Math.random() * 1000) + 100 : undefined;
+                // Используем реальное значение reward из API вместо случайного
+                const winAmount = ticket.reward !== null ? ticket.reward : undefined;
 
                 return {
                     ...ticket,
