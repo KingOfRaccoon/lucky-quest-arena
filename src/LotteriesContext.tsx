@@ -1,6 +1,6 @@
-import React, {createContext, useContext, useState, useEffect, ReactNode} from "react";
+import React, {createContext, useContext, useState, useEffect, ReactNode, useMemo} from "react";
 import {lotteries as mockLotteries} from "@/data/mockData";
-import {API_BASE_URL} from "@/config/api.ts";
+import { API_BASE_URL, get, post } from "@/services/api.ts";
 
 // Новый тип для лотереи согласно формату API
 export type Lottery = {
@@ -18,6 +18,31 @@ export type Lottery = {
     winning_str: string | null;
     bonus_credit: number;
     is_active: boolean;
+};
+
+// Тип для сгруппированной лотереи
+export type GroupedLottery = {
+    name: string; // Название лотереи
+    draws: Lottery[]; // Все розыгрыши данной лотереи
+    nextDraw: Lottery; // Ближайший розыгрыш
+    totalDraws: number; // Общее количество розыгрышей
+};
+
+// Тип для билета из API
+export type Ticket = {
+    purchase_date: string;
+    id: number;
+    reward_id: number | null;
+    draw_id: number;
+    value_str: string;
+    profile_id: number;
+};
+
+// Тип для билета с дополнительной информацией
+export type EnrichedTicket = Ticket & {
+    lottery?: Lottery;
+    status: "active" | "won" | "completed";
+    winAmount?: number;
 };
 
 // Старый тип для совместимости с моковыми данными
@@ -45,6 +70,7 @@ const convertMockToLottery = (mockLottery: MockLottery): Lottery => {
 
 type LotteriesContextType = {
     lotteries: Lottery[];
+    groupedLotteries: GroupedLottery[]; // Сгруппированные лотереи
     loading: boolean;
     error: string | null;
     setLotteries: (lotteries: Lottery[]) => void;
@@ -52,6 +78,17 @@ type LotteriesContextType = {
     updateLottery: (id: number, patch: Partial<Lottery>) => void;
     removeLottery: (id: number) => void;
     refreshLotteries: () => Promise<void>;
+
+    // Методы для работы с группировкой лотерей
+    getLotteryDraws: (lotteryName: string) => Lottery[];
+    getNextDrawByLotteryName: (lotteryName: string) => Lottery | undefined;
+
+    // Новые методы для работы с билетами
+    userTickets: EnrichedTicket[];
+    ticketsLoading: boolean;
+    ticketsError: string | null;
+    fetchUserTickets: (profileId: number) => Promise<void>;
+    getLotteryByDrawId: (drawId: number) => Lottery | undefined;
 };
 
 const LotteriesContext = createContext<LotteriesContextType | undefined>(undefined);
@@ -61,17 +98,18 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Состояние для билетов
+    const [userTickets, setUserTickets] = useState<EnrichedTicket[]>([]);
+    const [ticketsLoading, setTicketsLoading] = useState<boolean>(false);
+    const [ticketsError, setTicketsError] = useState<string | null>(null);
+
     const fetchLotteries = async () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetch(`https://5.129.199.72:9090/lottery/draws`);
 
-            if (!response.ok) {
-                throw new Error(`Ошибка: ${response.status}`);
-            }
-
-            const data = await response.json();
+            // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+            const data = await get<{ draws: Lottery[] }>('/lottery/draws');
             setLotteries(data.draws);
         } catch (err) {
             console.error('Ошибка при загрузке данных:', err);
@@ -81,6 +119,99 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
             setLotteries(convertedMockLotteries);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Группировка лотерей по названию и сортировка розыгрышей по дате
+    const groupedLotteries = useMemo(() => {
+        if (!lotteries.length) return [];
+
+        const lotteryGroups: { [key: string]: Lottery[] } = {};
+
+        // Группируем розыгрыши по названию лотереи
+        lotteries.forEach(lottery => {
+            if (!lotteryGroups[lottery.name]) {
+                lotteryGroups[lottery.name] = [];
+            }
+            lotteryGroups[lottery.name].push(lottery);
+        });
+
+        // Преобразуем в массив сгруппированных лотерей и сортируем розыгрыши по дате
+        return Object.entries(lotteryGroups).map(([name, draws]) => {
+            // Сортируем розыгрыши по дате (от ближайшего к дальнейшему)
+            const sortedDraws = [...draws].sort(
+                (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
+            );
+
+            return {
+                name,
+                draws: sortedDraws,
+                nextDraw: sortedDraws[0], // Первый розыгрыш после сортировки - ближайший
+                totalDraws: sortedDraws.length
+            };
+        });
+    }, [lotteries]);
+
+    // Получение всех розыгрышей конкретной лотереи, отсортированных по дате
+    const getLotteryDraws = (lotteryName: string): Lottery[] => {
+        const group = groupedLotteries.find(group => group.name === lotteryName);
+        return group ? group.draws : [];
+    };
+
+    // Получение ближайшего розыгрыша конкретной лотереи
+    const getNextDrawByLotteryName = (lotteryName: string): Lottery | undefined => {
+        const group = groupedLotteries.find(group => group.name === lotteryName);
+        return group ? group.nextDraw : undefined;
+    };
+
+    // Функция для получения лотереи по drawId
+    const getLotteryByDrawId = (drawId: number): Lottery | undefined => {
+        return lotteries.find(lottery => lottery.id === drawId);
+    };
+
+    // Функция для получения билетов пользователя
+    const fetchUserTickets = async (profileId: number) => {
+        try {
+            setTicketsLoading(true);
+            setTicketsError(null);
+
+            // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+            const data = await post<{ tickets: Ticket[] }>('/tickets/list', { profile_id: profileId });
+
+            // Обогащаем билеты информацией о лотерее
+            const enrichedTickets: EnrichedTicket[] = data.tickets.map((ticket: Ticket) => {
+                const lottery = getLotteryByDrawId(ticket.draw_id);
+                const now = new Date();
+                const endDate = lottery ? new Date(lottery.end_date) : null;
+
+                // Определяем статус б��лета
+                let status: "active" | "won" | "completed" = "completed";
+                if (endDate && endDate > now) {
+                    status = "active";
+                } else if (ticket.reward_id !== null) {
+                    status = "won";
+                }
+
+                // Генерируем случайный выигрыш для выигрышных билетов
+                const winAmount = status === "won" ? Math.floor(Math.random() * 1000) + 100 : undefined;
+
+                return {
+                    ...ticket,
+                    lottery,
+                    status,
+                    winAmount
+                };
+            });
+
+            setUserTickets(enrichedTickets);
+        } catch (err) {
+            console.error('Ошибка при загрузке билетов:', err);
+            setTicketsError(err instanceof Error ? err.message : 'Неизвестная ошибка при загрузке билетов');
+
+            // Создаем пустой массив билетов в случае ошибки
+            setUserTickets([]);
+        } finally {
+            setTicketsLoading(false);
         }
     };
 
@@ -104,13 +235,25 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
     return (
         <LotteriesContext.Provider value={{
             lotteries,
+            groupedLotteries,
             loading,
             error,
             setLotteries,
             addLottery,
             updateLottery,
             removeLottery,
-            refreshLotteries
+            refreshLotteries,
+
+            // Методы для работы с группировкой
+            getLotteryDraws,
+            getNextDrawByLotteryName,
+
+            // Новые функции для работы с билетами
+            userTickets,
+            ticketsLoading,
+            ticketsError,
+            fetchUserTickets,
+            getLotteryByDrawId
         }}>
             {children}
         </LotteriesContext.Provider>

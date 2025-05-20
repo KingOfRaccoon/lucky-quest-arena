@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { battlePassLevels as mockBattlePassLevels } from "@/data/mockData";
+import { post } from "@/services/api.ts";
 
 export interface BattlePassReward {
   battlepass_id: number;
@@ -45,29 +46,22 @@ export const BattlePassProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`https://5.129.199.72:9090/battlepass/view`, {
-        method: 'POST'
-      });
+      // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+      const data = await post<BattlePassData>('/battlepass/view', {});
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("API Error Response:", response.status, errorData);
-        throw new Error(`Ошибка загрузки данных Battle Pass: ${response.status} ${response.statusText}`);
-      }
-
-      const data: BattlePassData = await response.json();
-
-      // Устанавливаем уровни Battle Pass
       setBattlePassLevels(data.reward);
       setStartDate(data.start_date);
       setEndDate(data.end_date);
     } catch (err) {
-      console.error('Ошибка при загрузке данных Battle Pass:', err);
-      setError(err instanceof Error ? err.message : 'Неизвестная ошибка при загрузке данных Battle Pass');
+      console.error('Ошибка при загрузке Battle Pass:', err);
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка при загрузке Battle Pass');
 
-      // В случае ошибки можно загрузить мок-данные для разработки
-      console.warn("Загрузка мок-данных Battle Pass из-за ошибки API.");
+      // В случае ошибки, используем мок-данные
+      console.warn("Загрузка мок-данных Battle Pass из-за ошибки API");
       setBattlePassLevels(mockBattlePassLevels as unknown as BattlePassLevel[]);
+      const now = new Date();
+      setStartDate(new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
+      setEndDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString());
     } finally {
       setLoading(false);
     }
@@ -77,16 +71,13 @@ export const BattlePassProvider = ({ children }: { children: ReactNode }) => {
     void fetchBattlePassData();
   }, []);
 
-  const updateBattlePassLevel = (level: number, patch: Partial<BattlePassLevel>) =>
-    setBattlePassLevels(prev =>
-      prev.map(lv =>
-        lv.level === level ? { ...lv, ...patch, level: lv.level } as typeof lv : lv
-      )
+  const updateBattlePassLevel = (level: number, patch: Partial<BattlePassLevel>) => {
+    setBattlePassLevels(prevLevels =>
+      prevLevels.map(l => (l.level === level ? { ...l, ...patch } : l))
     );
-
-  const refreshBattlePass = async () => {
-    await fetchBattlePassData();
   };
+
+  const refreshBattlePass = fetchBattlePassData;
 
   return (
     <BattlePassContext.Provider
@@ -98,7 +89,7 @@ export const BattlePassProvider = ({ children }: { children: ReactNode }) => {
         endDate,
         loading,
         error,
-        refreshBattlePass
+        refreshBattlePass,
       }}
     >
       {children}

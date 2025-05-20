@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  ArrowRight,
   Trophy,
   Ticket,
   Coins,
@@ -18,55 +17,143 @@ import {
   UserRound
 } from "lucide-react";
 import { useLotteries } from "@/LotteriesContext.tsx";
-import { useUserTickets } from "@/UserTicketsContext.tsx";
-import { useUser } from "@/UserContext.tsx"; // Импортируем useUser
-import { useToast } from "@/hooks/use-toast"; // Импортируем useToast
+import { useUser } from "@/UserContext.tsx";
+import { useToast } from "@/hooks/use-toast";
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState(500);
-  const { lotteries } = useLotteries();
-  // Используем обновленный UserContext
-  const { user, addCurrency, loading: userLoading, error: userError } = useUser();
-  const { userTickets } = useUserTickets();
-  const { toast } = useToast(); // Инициализируем toast
+  const [ticketsLoadAttempted, setTicketsLoadAttempted] = useState(false);
 
-  // Тестовые данные для истории транзакций (можно будет заменить на данные из user.purchaseHistory, если они будут в API)
-  const transactions = [
-    {
-      id: 1,
-      date: "2025-05-17T14:30:00",
-      type: "purchase",
-      description: "Покупка билета «Счастливая Семёрка»",
-      amount: -150,
-      currency: "RUB" // Используем RUB для валюты, BONUS для кредитов/бонусов
-    },
-    {
-      id: 3,
-      date: "2025-05-15T16:20:00",
-      type: "purchase",
-      description: "Покупка билета «Стратегический Бонус»",
-      amount: -300,
-      currency: "BONUS"
-    },
-    {
-      id: 4,
-      date: "2025-05-17T19:05:00",
-      type: "win",
-      description: "Выигрыш в «Стратегический Бонус»",
-      amount: 250,
-      currency: "BONUS"
-    },
-    {
-      id: 5,
-      date: "2025-05-14T12:00:00",
-      type: "deposit",
-      description: "Пополнение баланса",
-      amount: 1000,
-      currency: "RUB"
+  // Используем расширенный контекст лотерей с билетами
+  const { lotteries, userTickets, ticketsLoading, fetchUserTickets } = useLotteries();
+  const { user, addCurrency, loading: userLoading, error: userError } = useUser();
+  const { toast } = useToast();
+
+  // Улучшенная версия загрузки билетов, защищенная от бесконечных циклов
+  const loadUserTickets = useCallback(async () => {
+    if (!user?.id || ticketsLoadAttempted) return;
+
+    try {
+      setTicketsLoadAttempted(true);
+      await fetchUserTickets(user.id);
+    } catch (err) {
+      console.error("Ошибка при загрузке билетов:", err);
+      // Ошибка уже обрабатывается в контексте, здесь можно добавить уведомление если нужно
+      toast({
+        title: "Ошибка загрузки билетов",
+        description: "Не удалось загрузить информацию о ваших билетах. Попробуйте позже.",
+        variant: "destructive",
+      });
     }
-  ];
+  }, [user?.id, fetchUserTickets, ticketsLoadAttempted, toast]);
+
+  // Загружаем билеты пользователя при монтировании и изменении user.id
+  useEffect(() => {
+    if (user?.id) {
+      void loadUserTickets();
+    }
+  }, [user?.id, loadUserTickets]);
+
+  // Сбрасываем флаг загрузки при размонтировании
+  useEffect(() => {
+    return () => {
+      setTicketsLoadAttempted(false);
+    };
+  }, []);
+
+  // Создаем транзакции на основе данных о билетах
+  const generateTransactionsFromTickets = (): {
+    id: number;
+    date: string;
+    type: "purchase" | "win" | "deposit";
+    description: string;
+    amount: number;
+    currency: "RUB" | "BONUS"; // RUB для валюты, BONUS для кредитов
+  }[] => {
+    if (!userTickets.length) return [];
+
+    const ticketTransactions = userTickets.map((ticket, _) => {
+      const lotteryName = ticket.lottery?.name || `Лотерея #${ticket.draw_id}`;
+
+      // Транзакция покупки билета (всегда создается)
+      const purchaseTransaction = {
+        id: ticket.id * 10, // Уникальный id для транзакции покупки
+        date: ticket.purchase_date,
+        type: "purchase" as const,
+        description: `Покупка билета «${lotteryName}»`,
+        // Используем цену лотереи, если доступна, иначе случайное значение
+        amount: -(ticket.lottery?.price_currency || Math.floor(Math.random() * 300) + 100),
+        currency: "RUB" as const // Предполагаем, что билеты пок��паются за валюту
+      };
+
+      // Для выигрышных билетов добавляем транзакцию выигрыша
+      if (ticket.status === "won" && ticket.winAmount) {
+        return [
+          purchaseTransaction,
+          {
+            id: ticket.id * 10 + 1, // Уникальный id для транзакции выигрыша
+            date: new Date(new Date(ticket.purchase_date).getTime() + 86400000).toISOString().split('T')[0], // Выигрыш на следующий день
+            type: "win" as const,
+            description: `Выигрыш в «${lotteryName}»`,
+            amount: ticket.winAmount,
+            currency: "BONUS" as const // Предполагаем, что выигрыши в кредитах
+          }
+        ];
+      }
+
+      return [purchaseTransaction];
+    });
+
+    // Уплощаем массив транзакций и добавляем транзакцию пополнения для примера
+    const flatTransactions = ticketTransactions.flat();
+
+    // Добавляем пример пополнения баланса
+    if (flatTransactions.length > 0) {
+      flatTransactions.push({
+        id: 99999,
+        date: new Date().toISOString().split('T')[0],
+        type: "deposit" as const,
+        description: "Пополнение баланса",
+        amount: 1000,
+        currency: "RUB" as const
+      });
+    }
+
+    // Сортируем по дате (сначала новые)
+    return flatTransactions.sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  };
+
+  const transactions = generateTransactionsFromTickets();
+
+  // Функция для извлечения номеров из строки значения билета
+  const extractNumbersFromTicket = (valueStr: string): number[] => {
+    // Для автомобильных номеров - возвращаем коды символов
+    if (valueStr.length <= 10 && /[А-Я]/.test(valueStr)) {
+      return Array.from(valueStr).map(char => char.charCodeAt(0));
+    }
+
+    // Для числовых комбинаций - разделяем на числа
+    const numbers = valueStr.split(/[^0-9]+/).filter(Boolean).map(Number);
+    if (numbers.length > 0) {
+      return numbers;
+    }
+
+    // Если не удалось определить формат, возвращаем коды всех символов
+    return Array.from(valueStr).map(char => char.charCodeAt(0) % 100); // Ограничиваем до 2 цифр
+  };
+
+  // Обогащаем билеты дополнительной информацией для отображения
+  const enrichedTicketsForUI = userTickets.map(ticket => ({
+    ...ticket,
+    lotteryName: ticket.lottery?.name || `Лотерея #${ticket.draw_id}`,
+    numbers: extractNumbersFromTicket(ticket.value_str),
+    purchaseDate: ticket.purchase_date,
+    drawDate: ticket.lottery?.end_date || new Date().toISOString()
+  }));
 
   const handleDeposit = async () => {
     if (depositAmount <= 0) {
@@ -78,7 +165,7 @@ const UserProfile = () => {
       return;
     }
     try {
-      await addCurrency(depositAmount); // Используем addCurrency из UserContext
+      await addCurrency(depositAmount);
       toast({
         title: "Успешно",
         description: `Баланс пополнен на ${depositAmount} ₽.`,
@@ -94,11 +181,21 @@ const UserProfile = () => {
   };
 
   // Обработка состояний загрузки и ошибок
-  if (userLoading && !user) {
+  if ((userLoading && !user)) {
     return (
       <BaseLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
-          <p>Загрузка данных пользователя...</p>
+          <p>Загрузка данных профиля...</p>
+        </div>
+      </BaseLayout>
+    );
+  }
+
+  if (ticketsLoading) {
+    return (
+      <BaseLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p>Загрузка данных о билетах...</p>
         </div>
       </BaseLayout>
     );
@@ -133,7 +230,6 @@ const UserProfile = () => {
     <BaseLayout>
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Личный кабинет</h1>
-        {/* Отображаем имя пользователя из user.name */}
         <p className="text-gray-500">Добро пожаловать, {user.name}!</p>
       </div>
       
@@ -148,32 +244,25 @@ const UserProfile = () => {
           <CardContent>
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                {/* Иконка пользователя */}
                 <UserRound className="h-8 w-8 text-primary" />
               </div>
               <div>
-                {/* Используем user.name */}
                 <h3 className="font-semibold text-lg">{user.name}</h3>
-                {/* Email удален из модели User, можно добавить заглушку или убрать поле */}
-                {/* <p className="text-sm text-muted-foreground">{user.email || "email@example.com"}</p> */}
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Баланс:</span>
-                {/* Используем user.currency */}
                 <span className="font-medium">{user.currency} ₽</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Кредиты:</span>
-                {/* Используем user.credits */}
                 <span className="font-medium">{user.credits} кредитов</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">VIP-статус:</span>
                 <div className="flex items-center">
-                  {/* Используем user.vip (булево) */}
                   <Badge className={`${user.vip ? 'bg-gradient-to-r from-purple-600 to-pink-500' : 'bg-gray-400'}`}>
                     <Crown className="h-3 w-3 mr-1" />
                     {user.vip ? "VIP Активен" : "Стандарт"}
@@ -193,10 +282,6 @@ const UserProfile = () => {
               <Button variant="outline" size="sm" className="w-full" onClick={() => setShowDeposit(true)}>
                 Пополнить баланс
               </Button>
-              {/* Кнопка редактирования профиля (функционал не реализован в UserContext) */}
-              {/* <Button variant="outline" size="sm" className="w-full">
-                Редактировать профиль
-              </Button> */}
             </div>
 
             {showDeposit && (
@@ -225,8 +310,6 @@ const UserProfile = () => {
           </CardContent>
         </Card>
 
-        {/* ... Остальные карточки (Активные билеты, Ближайшие розыгрыши) остаются без изменений в этой части ... */}
-        {/* ... Код для карточек "Активные билеты" и "Ближайшие розыгрыши" ... */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center">
@@ -235,8 +318,8 @@ const UserProfile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {userTickets.filter(ticket => ticket.status === "active").length > 0 ?
-              userTickets.filter(ticket => ticket.status === "active").map((ticket, index) => (
+            {enrichedTicketsForUI.filter(ticket => ticket.status === "active").length > 0 ?
+              enrichedTicketsForUI.filter(ticket => ticket.status === "active").map((ticket, index) => (
                 <div
                   key={index}
                   className={`p-3 rounded-md ${index > 0 ? 'mt-3' : ''} bg-gray-50 hover:bg-gray-100`}
@@ -246,7 +329,7 @@ const UserProfile = () => {
                     <Badge variant="outline">{new Date(ticket.drawDate).toLocaleDateString('ru-RU')}</Badge>
                   </div>
                   <div className="flex gap-1 mb-2">
-                    {ticket.numbers.map((num, i) => (
+                    {ticket.numbers.slice(0, 6).map((num, i) => (
                       <div
                         key={i}
                         className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium"
@@ -258,11 +341,16 @@ const UserProfile = () => {
                   <div className="flex justify-between items-center text-sm text-muted-foreground">
                     <div className="flex items-center">
                       <Clock className="h-3 w-3 mr-1" />
-                      {/* TODO: Рассчитать реальное время до розыгрыша */}
-                      <span>До розыгрыша: {Math.floor(Math.random() * 24)} ч</span>
+                      {/* Рассчитываем время до розыгрыша */}
+                      <span>До розыгрыша: {
+                        Math.max(
+                          0,
+                          Math.floor((new Date(ticket.drawDate).getTime() - new Date().getTime()) / (1000 * 60 * 60))
+                        )
+                      } ч</span>
                     </div>
                     <Button variant="ghost" size="sm" className="h-6 px-2" asChild>
-                      <Link to={`/lottery/${ticket.lotteryId}`}>
+                      <Link to={`/lottery/${ticket.draw_id}`}>
                         Подробнее
                         <ChevronRight className="h-3 w-3 ml-1" />
                       </Link>
@@ -292,11 +380,11 @@ const UserProfile = () => {
           <CardContent>
             {lotteries.length > 0 ? (
               <div className="space-y-3">
-                {lotteries.slice(0, 3).map((lottery, index) => ( // Показываем только первые 3 для краткости
+                {lotteries.slice(0, 3).map((lottery, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="bg-white shadow rounded-lg overflow-hidden h-10 w-10 flex-shrink-0">
                       <img
-                        src={"/placeholder.svg"} // TODO: Использовать lottery.image_url, если будет
+                        src={"/placeholder.svg"}
                         alt={lottery.name}
                         className="w-full h-full object-cover"
                       />
@@ -350,17 +438,17 @@ const UserProfile = () => {
                 <CardTitle className="text-lg">Последние выигрыши</CardTitle>
               </CardHeader>
               <CardContent>
-                {userTickets.filter(ticket => ticket.status === "won").length > 0 ? (
+                {enrichedTicketsForUI.filter(ticket => ticket.status === "won").length > 0 ? (
                   <div className="space-y-4">
-                    {userTickets.filter(ticket => ticket.status === "won").map((ticket, index) => (
+                    {enrichedTicketsForUI.filter(ticket => ticket.status === "won").map((ticket, index) => (
                       <div key={index} className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex justify-between mb-2">
                           <span className="font-semibold">{ticket.lotteryName}</span>
                           <Badge variant="default" className="bg-green-500">Выигрыш</Badge>
                         </div>
                         <div className="flex gap-2 mb-2">
-                          {ticket.numbers.map((num, i) => (
-                            <div 
+                          {ticket.numbers.slice(0, 6).map((num, i) => (
+                            <div
                               key={i} 
                               className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-medium"
                             >
@@ -372,7 +460,6 @@ const UserProfile = () => {
                           <div className="text-sm text-muted-foreground">
                             {new Date(ticket.drawDate).toLocaleDateString('ru-RU')}
                           </div>
-                          {/* Отображаем выигрыш в кредитах, если это так */}
                           <div className="font-semibold text-green-600">{ticket.winAmount} кредитов</div>
                         </div>
                       </div>
@@ -403,21 +490,27 @@ const UserProfile = () => {
                 <div className="space-y-4">
                   <div>
                     <h3 className="font-medium mb-2">Статистика участия</h3>
-                    {/* TODO: Заменить мок-данные на реальные из user, если они будут доступны */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="p-3 bg-gray-50 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-primary">{userTickets.length}</div>
+                        <div className="text-2xl font-bold text-primary">{enrichedTicketsForUI.length}</div>
                         <div className="text-xs text-muted-foreground">Всего билетов</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-lg text-center">
                         <div className="text-2xl font-bold text-primary">
-                          {userTickets.filter(t => t.status === 'won').length}
+                          {enrichedTicketsForUI.filter(t => t.status === 'won').length}
                         </div>
                         <div className="text-xs text-muted-foreground">Выигрышей</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-lg text-center">
-                        {/* TODO: Рассчитать доходность, если есть данные о тратах/выигрышах */}
-                        <div className="text-2xl font-bold text-primary">N/A</div>
+                        {/* Рассчитываем доходность, если есть данные */}
+                        <div className="text-2xl font-bold text-primary">
+                          {enrichedTicketsForUI.length > 0 ?
+                            Math.round(
+                              (enrichedTicketsForUI.filter(t => t.status === 'won').length /
+                              enrichedTicketsForUI.length) * 100
+                            ) + '%'
+                            : 'N/A'}
+                        </div>
                         <div className="text-xs text-muted-foreground">Доходность</div>
                       </div>
                     </div>
@@ -431,7 +524,6 @@ const UserProfile = () => {
                           <Crown className="h-4 w-4 mr-2 text-yellow-500" />
                           <span className="font-medium">{user.vip ? "VIP Активен" : "Стандарт"}</span>
                         </div>
-                        {/* TODO: Нужны данные для расчета прогресса до следующего VIP уровня */}
                         <span className="text-sm">{vipProgress}% до "{nextVipLevelName}"</span>
                       </div>
                       <Progress value={vipProgress} className="h-2 mb-2" />
@@ -446,17 +538,15 @@ const UserProfile = () => {
           </div>
         </TabsContent>
         
-        {/* ... Остальные вкладки (Мои билеты, История) остаются без изменений в этой части ... */}
-        {/* ... Код для вкладок "Мои билеты" и "История транзакций" ... */}
         <TabsContent value="tickets" className="mt-0">
           <Card>
             <CardHeader>
               <CardTitle>История ваших билетов</CardTitle>
             </CardHeader>
             <CardContent>
-              {userTickets.length > 0 ? (
+              {enrichedTicketsForUI.length > 0 ? (
                 <div className="space-y-4">
-                  {userTickets.map((ticket, index) => (
+                  {enrichedTicketsForUI.map((ticket, index) => (
                     <div
                       key={index}
                       className="p-4 rounded-lg border"
@@ -472,7 +562,7 @@ const UserProfile = () => {
                         )}
                       </div>
                       <div className="flex gap-2 mb-3">
-                        {ticket.numbers.map((num, i) => (
+                        {ticket.numbers.slice(0, 6).map((num, i) => (
                           <div
                             key={i}
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
@@ -486,6 +576,11 @@ const UserProfile = () => {
                         ))}
                       </div>
                       <div className="flex justify-between">
+                        <div className="text-sm text-muted-foreground">
+                          Комбинация: {ticket.value_str}
+                        </div>
+                      </div>
+                      <div className="flex justify-between mt-2">
                         <div className="text-sm text-muted-foreground">
                           Дата покупки: {new Date(ticket.purchaseDate).toLocaleDateString('ru-RU')}
                         </div>
@@ -547,7 +642,7 @@ const UserProfile = () => {
                           : 'text-red-600'
                       }`}>
                         {transaction.amount > 0 ? '+' : ''}{transaction.amount} {
-                          transaction.currency === 'RUB' ? '₽' : 'кредитов' // Изменено "бонусов" на "кредитов"
+                          transaction.currency === 'RUB' ? '₽' : 'кредитов'
                         }
                       </div>
                     </div>

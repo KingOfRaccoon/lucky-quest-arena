@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Button } from "@/components/ui/button";
@@ -10,19 +10,19 @@ import { Ticket, Gift, Crown, Trophy, Clock, ArrowRight, User } from "lucide-rea
 import { useUser } from "@/UserContext";
 import { useBattlePass } from "@/BattlePassContext";
 import { useMiniGames } from "@/MiniGamesContext";
-import {Lottery, useLotteries} from "@/LotteriesContext.tsx";
-import {useTasks} from "@/TasksContext.tsx";
+import { useLotteries, GroupedLottery } from "@/LotteriesContext.tsx";
+import { useTasks } from "@/TasksContext.tsx";
 
 const Index = () => {
-  const [countdown, setCountdown] = useState({ minutes: 0, seconds: 0 });
-  const { lotteries, loading, error } = useLotteries();
+  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  // Используем группировку розыгрышей лотерей
+  const { groupedLotteries, loading, error } = useLotteries();
   const { user } = useUser();
   const { battlePassLevels } = useBattlePass();
   const { dailyTasks } = useTasks();
   const { miniGames } = useMiniGames();
-  const [nextLottery, setNextLottery] = useState<Lottery | null>(null);
+  const [nextLottery, setNextLottery] = useState<GroupedLottery | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   // Получаем активную вкладку из URL-параметра или используем "lotteries" по умолчанию
   const activeTab = searchParams.get("tab") || "lotteries";
@@ -32,20 +32,21 @@ const Index = () => {
     setSearchParams({ tab: value });
   };
 
-  // Calculate time until next draw
+  // Calculate time until next draw - теперь используем ближ��йший розыгрыш из сгруппированных лотерей
   useEffect(() => {
-    if (lotteries && lotteries.length > 0) {
-      const sortedLotteries = [...lotteries].sort((a, b) =>
-        new Date(a.end_date).getTime() - new Date(b.end_date).getTime() // Используем end_date
+    if (groupedLotteries && groupedLotteries.length > 0) {
+      // Сортируем лотереи по дате ближайшего розыгрыша
+      const sortedLotteries = [...groupedLotteries].sort((a, b) =>
+        new Date(a.nextDraw.end_date).getTime() - new Date(b.nextDraw.end_date).getTime()
       );
       setNextLottery(sortedLotteries[0]);
 
       const timer = setInterval(() => {
         const now = new Date();
-        const nextDrawDate = sortedLotteries[0]?.end_date; // Проверка на существование
+        const nextDrawDate = sortedLotteries[0]?.nextDraw?.end_date;
         if (!nextDrawDate) {
           clearInterval(timer);
-          setCountdown({ minutes: 0, seconds: 0 });
+          setCountdown({ hours: 0, minutes: 0, seconds: 0 });
           return;
         }
         const nextDraw = new Date(nextDrawDate);
@@ -53,25 +54,49 @@ const Index = () => {
 
         if (diff <= 0) {
           clearInterval(timer);
-          setCountdown({ minutes: 0, seconds: 0 });
+          setCountdown({ hours: 0, minutes: 0, seconds: 0 });
         } else {
-          const minutes = Math.floor(diff / 1000 / 60);
-          const seconds = Math.floor((diff / 1000) % 60);
-          setCountdown({ minutes, seconds });
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          setCountdown({ hours, minutes, seconds });
         }
       }, 1000);
 
       return () => clearInterval(timer);
     }
-  }, [lotteries]);
-  
-  // Calculate battle pass progress
+  }, [groupedLotteries]);
+
+  // Calculate battle pass progress с исправленной формулой
   const currentBattlePassLevel = user && battlePassLevels.find(level => level.level === user.battlePassLevel);
   const nextBattlePassLevel = user && battlePassLevels.find(level => level.level === user.battlePassLevel + 1);
-  const battlePassProgress = user && nextBattlePassLevel
-    ? ((user.battlePassXp - (currentBattlePassLevel?.xpRequired || 0)) /
-       (nextBattlePassLevel.xpRequired - (currentBattlePassLevel?.xpRequired || 0))) * 100
-    : 0;
+
+  const battlePassProgress = useMemo(() => {
+    // Если пользователя нет или не найден уровень battle pass
+    if (!user || !currentBattlePassLevel) {
+      return 0;
+    }
+
+    // Если следующего уровня нет (максимальный уровень достигнут)
+    if (!nextBattlePassLevel) {
+      return 100;
+    }
+
+    const currentLevelXP = currentBattlePassLevel.xpRequired || 0;
+    const nextLevelXP = nextBattlePassLevel.xpRequired || 0;
+    const userXP = user.battlePassXp || 0;
+
+    // Предотвращаем деление на ноль
+    if (nextLevelXP <= currentLevelXP) {
+      return 0;
+    }
+
+    // Вычисляем процент прогресса между текущим и следующим уровнем
+    const progressPercent = ((userXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+
+    // Ограничиваем значение между 0 и 100
+    return Math.max(0, Math.min(100, progressPercent));
+  }, [user, currentBattlePassLevel, nextBattlePassLevel]);
 
   return (
     <BaseLayout>
@@ -109,23 +134,23 @@ const Index = () => {
                   <>
                     <div className="mb-4">
                       <p className="text-sm font-semibold">{nextLottery.name}</p>
-                      <p className="text-sm opacity-90">{nextLottery.description_md}</p> {/* Используем description_md */}
+                      <p className="text-sm opacity-90">{nextLottery.nextDraw.description_md}</p>
                     </div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium flex items-center">
                         <Clock size={16} className="mr-1" /> До розыгрыша:
                       </span>
                       <span className="countdown">
-                        {countdown.minutes.toString().padStart(2, '0')}:{countdown.seconds.toString().padStart(2, '0')}
+                        {countdown.hours.toString().padStart(2, '0')}:{countdown.minutes.toString().padStart(2, '0')}:{countdown.seconds.toString().padStart(2, '0')}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm mb-4">
                       <span>Призовой фонд:</span>
-                      <span className="font-bold">{nextLottery.price_currency} ₽</span> {/* Используем price_currency */}
+                      <span className="font-bold">{nextLottery.nextDraw.price_currency} ₽</span>
                     </div>
                     <div className="text-center">
                       <Button className="w-full game-button" asChild>
-                        <Link to={`/lottery/${nextLottery.id}`}>
+                        <Link to={`/lottery/${nextLottery.nextDraw.id}`}>
                           Участвовать
                         </Link>
                       </Button>
@@ -174,7 +199,7 @@ const Index = () => {
                   {battlePassLevels.slice(0, 5).map((level) => (
                     <div 
                       key={level.level} 
-                      className={`battle-pass-level ${user && level.level <= user.battlePassLevel ? "completed" : user && level.level === user.battlePassLevel + 1 ? "active" : "border-gray-300"}`}
+                      className={`battle-pass-level ${user && level.level <= user.battlepass_lvl ? "completed" : user && level.level === user.battlePassLevel + 1 ? "active" : "border-gray-300"}`}
                     >
                       {level.level}
                     </div>
@@ -183,7 +208,7 @@ const Index = () => {
                 
                 <div className="mt-4 text-center">
                   <span className="text-sm text-muted-foreground block mb-2">
-                    Следующая награда: <span className="font-medium">{nextBattlePassLevel?.reward}</span>
+                    Следующая награда: <span className="font-medium">{nextBattlePassLevel?.reward || 0}</span>
                   </span>
                 </div>
               </div>
@@ -260,17 +285,17 @@ const Index = () => {
             {!loading && !error && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {lotteries && lotteries.map((lottery) => (
-                    <Card key={lottery.id} className="lottery-card overflow-hidden">
+                  {groupedLotteries.map((lottery) => (
+                    <Card key={lottery.name} className="lottery-card overflow-hidden">
                       <div className="aspect-video bg-muted relative">
                         <img
-                          src={'/placeholder.svg'} // Используем заглушку, т.к. в API нет поля image
+                          src={'/placeholder.svg'}
                           alt={lottery.name}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                          <Badge className="mb-2" variant={lottery.lottery_type_id === 1 ? "default" : "secondary"}>
-                            {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
+                          <Badge className="mb-2" variant={lottery.nextDraw.lottery_type_id === 1 ? "default" : "secondary"}>
+                            {lottery.nextDraw.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
                           </Badge>
                           <h3 className="text-lg font-semibold text-white">{lottery.name}</h3>
                         </div>
@@ -278,28 +303,34 @@ const Index = () => {
                       <CardContent className="pt-4">
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span>Розыгрыш:</span>
+                            <span>Ближайший розыгрыш:</span>
                             <span className="font-medium">
-                              {new Date(lottery.end_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
+                              {new Date(lottery.nextDraw.end_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span>Призовой фонд:</span>
                             <span className="font-medium text-primary">
-                              {lottery.price_currency} ₽
+                              {lottery.nextDraw.price_currency} ₽
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span>Цена билета:</span>
                             <span className="font-medium">
-                              {lottery.price_currency > 0 ? `${lottery.price_currency} ₽` : lottery.price_credits ? `${lottery.price_credits} бонусов` : "Бесплатно"}
+                              {lottery.nextDraw.price_currency > 0 ? `${lottery.nextDraw.price_currency} ₽` : lottery.nextDraw.price_credits ? `${lottery.nextDraw.price_credits} бонусов` : "Бесплатно"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Всего розыгрышей:</span>
+                            <span className="font-medium">
+                              {lottery.totalDraws}
                             </span>
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter>
                         <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
-                          <Link to={`/lottery/${lottery.id}`}>
+                          <Link to={`/lottery/${lottery.nextDraw.id}`}>
                             Подробнее
                           </Link>
                         </Button>

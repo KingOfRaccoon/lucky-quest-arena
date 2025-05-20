@@ -2,9 +2,7 @@ import {useState} from "react";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
 import {useToast} from "@/hooks/use-toast";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 // Русские буквы, которые используются в автомобильных номерах
 // (те, которые совпадают по написанию с латинскими)
@@ -33,7 +31,6 @@ const CarNumberSelection = ({
                                 setThirdNumbers,
                                 onValidationChange
                             }: CarNumberSelectionProps) => {
-    const {toast} = useToast();
     const [isFirstNumbersValid, setIsFirstNumbersValid] = useState(false);
     const [isSecondNumbersValid, setIsSecondNumbersValid] = useState(false);
     const [isThirdNumbersValid, setIsThirdNumbersValid] = useState(false);
@@ -170,7 +167,7 @@ const CarNumberSelection = ({
                             {/* Поля ввода позиционируются поверх картинки */}
                             <div
                                 className="absolute w-full h-full flex flex-col items-center justify-center">
-                                <div className="flex items-center justify-center gap-2 mx-auto" >
+                                <div className="flex items-center justify-center gap-2 mx-auto" style={{ marginLeft: "14px"}} >
                                     <Input
                                         className="w-14 h-14 text-2xl text-center bg-transparent border-none shadow-none focus:ring-0 focus:outline-none uppercase"
                                         value={selectedLetter}
@@ -182,16 +179,16 @@ const CarNumberSelection = ({
                                         }}
                                         placeholder="А"
                                         maxLength={1}
-                                        style={{letterSpacing: 2, padding: '0px 2px', borderColor: 'transparent'}}
+                                        style={{letterSpacing: 2, fontSize: "30px", padding: '0px 2px', borderColor: 'transparent'}}
                                     />
                                     <Input
-                                        className="w-24 h-12 text-4xl text-center bg-transparent border-transparent border-none shadow-none focus:ring-1 focus:outline-none"
+                                        className="w-24 h-12 text-8xl text-center bg-transparent border-transparent border-none shadow-none focus:ring-1 focus:outline-none"
                                         value={firstNumbers}
                                         onChange={(e) => handleFirstNumbersChange(e.target.value)}
                                         placeholder="777"
                                         inputMode="numeric"
                                         maxLength={3}
-                                        style={{letterSpacing: 2, padding: '0px 2px', borderColor: 'transparent'}}
+                                        style={{letterSpacing: 2, fontSize: "34px",  borderColor: 'transparent'}}
                                     />
                                     <Input
                                         className="w-16 h-14 text-2xl text-center bg-transparent border-none shadow-none focus:ring-0 focus:outline-none uppercase"
@@ -213,12 +210,12 @@ const CarNumberSelection = ({
                                         }}
                                         placeholder="АА"
                                         maxLength={2}
-                                        style={{letterSpacing: 2, padding: '0px 2px', borderColor: 'transparent'}}
+                                        style={{letterSpacing: 2, fontSize: "30px", padding: '0px 2px', borderColor: 'transparent'}}
                                     />
                                     <div style={{ position: 'relative', width: '56px', height: '0' }}>
                                         <Input
                                             className="w-14 h-8 text-2xl text-center bg-transparent border-none shadow-none focus:ring-0 focus:outline-none uppercase absolute"
-                                            style={{ top: '-26px', left: '0px', letterSpacing: 2, borderColor: 'transparent' }}
+                                            style={{ top: '-26px', left: '4px', fontSize: "20px", letterSpacing: 2, borderColor: 'transparent' }}
                                             value={thirdNumbers}
                                             onChange={(e) => handleThirdNumbersChange(e.target.value)}
                                             placeholder="77"

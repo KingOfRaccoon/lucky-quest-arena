@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/UserContext";
-import { API_BASE_URL } from "@/config/api";
 import BaseLayout from "@/components/layout/BaseLayout";
+import { post, get } from "@/services/api.ts";
 
 interface Hero {
   id: number;
@@ -53,24 +53,13 @@ const BossMonsterGame = () => {
   const startGame = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://5.129.199.72:9090/minigame/play`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await post<any>(`/minigame/play`, {
           profile_id: user?.id || 1,
           credits_price: betAmount,
-        }),
-      });
+        });
 
-      if (!response.ok) {
-        throw new Error("Ошибка при запуске игры");
-      }
-
-      const data = await response.json();
-      navigate(`/mini-games/5/${data.game_id}`);
-      fetchGameParams(data.game_id);
+      navigate(`/mini-games/5/${response.game_id}`);
+      await fetchGameParams(response.game_id);
       setGameState("playing");
     } catch (error) {
       toast({
@@ -86,20 +75,16 @@ const BossMonsterGame = () => {
   const fetchGameParams = async (id: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://5.129.199.72:9090/minigame/params/${id}`);
-
-      if (!response.ok) {
-        throw new Error("Ошибка при получении параметров игры");
-      }
-
-      const data = await response.json();
+      // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+      const data = await get<GameParams>(`/minigame/params/${id}`);
       setGameParams(data);
 
       // Вычисляем оставшееся время
       const endTime = new Date(data.end_time).getTime();
+      console.log(endTime);
       updateTimeLeft(endTime);
 
-      // Устанавливаем таймер для обновления оставшегося времени
+      // Устанавливае�� таймер для обновления оставшегося времени
       const intervalId = setInterval(() => {
         const remaining = updateTimeLeft(endTime);
         if (remaining <= 0) {
@@ -165,21 +150,11 @@ const BossMonsterGame = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://5.129.199.72:9090/minigame/picks/${gameId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          heroes_ids: selectedHeroes,
-        }),
+      // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+      const data = await post<{success: boolean}>(`/minigame/picks/${gameId}`, {
+        heroes_ids: selectedHeroes,
       });
-
-      if (!response.ok) {
-        throw new Error("Ошибка при отправке выбранных героев");
-      }
-
-      const data = await response.json();
+      console.log(selectedHeroes);
 
       if (data.success) {
         toast({
@@ -207,13 +182,8 @@ const BossMonsterGame = () => {
   const fetchGameResults = async (id: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://5.129.199.72:9090/minigame/results/${id}`);
-
-      if (!response.ok) {
-        throw new Error("Ошибка при получении результатов игры");
-      }
-
-      const data = await response.json();
+      // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+      const data = await get<GameResults>(`/minigame/results/${id}`);
       setGameResults(data);
       setGameState("results");
     } catch (error) {
@@ -257,7 +227,7 @@ const BossMonsterGame = () => {
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? "Загрузка..." : "Начать игру"}
+              {isLoading ? "Загрузка..." : "Начать и��ру"}
             </Button>
           </div>
         </div>

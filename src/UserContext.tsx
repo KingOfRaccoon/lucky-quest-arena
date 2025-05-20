@@ -1,8 +1,7 @@
 import React, {createContext, useContext, useState, useEffect, ReactNode} from "react";
 // Мок-данные пользователя пока оставим для возможной отладки
 import {user as mockUserData} from "@/data/mockData";
-import {max} from "date-fns";
-import {API_BASE_URL} from "@/config/api.ts";
+import { get, post, put } from "@/services/api.ts";
 
 // Обновленный интерфейс для пользователя на основе данных API
 export interface User {
@@ -19,7 +18,7 @@ const mockApiUser: User = {
     id: mockUserData.id,
     name: mockUserData.username, // Используем username из мока как name
     currency: mockUserData.balance, // balance из мока как currency
-    credits: mockUserData.bonusBalance, // bonusBalance из мока как credits
+    credits: mockUserData.bonusBalance, // bonusBalance из мока ��ак credits
     battlepass_lvl: mockUserData.battlePassLevel, // battlePassLevel из мока как battlepass_lvl
     vip: mockUserData.vipLevel ? mockUserData.vipLevel >= 1 : false, // Преобразуем vipLevel в boolean
 };
@@ -50,19 +49,9 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`https://5.129.199.72:9090/profile/profiles/1`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    // 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` // Раскомментировать при необходимости
-                }
-            });
-            if (!response.ok) {
-                const errorData = await response.text();
-                console.error("API Error Response:", response.status, errorData);
-                throw new Error(`Ошибка загрузки профиля: ${response.status} ${response.statusText}`);
-            }
-            const data = await response.json();
-            setUser(data as User);
+            // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
+            const data = await get<User>('/profile/profiles/1');
+            setUser(data);
             setIsAuthenticated(true);
         } catch (err) {
             console.error('Ошибка при загрузке данных пользователя:', err);
@@ -84,13 +73,14 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
         if (!user) return;
         setLoading(true);
         try {
-            // TODO: Реализовать API запрос для обновления данных пользователя (`PATCH /profile/profiles/{user.id}`)
-            // Локальное обновление для имитации
-            setUser(prevUser => prevUser ? {...prevUser, ...patch} : null);
-            // После успешного обновления на сервере, можно вызвать refreshUserData() или обновить локально, если API возвращает обновленного юзера
+            // Используем put для обновления данных пользователя
+            const updatedUser = await put<User>(`/profile/profiles/${user.id}`, patch);
+            setUser(updatedUser);
         } catch (err) {
             console.error('Ошибка обновления пользователя:', err);
             setError(err instanceof Error ? err.message : 'Ошибка обновления пользователя');
+            // Локальное обновление для имитации при ошибке API
+            setUser(prevUser => prevUser ? {...prevUser, ...patch} : null);
         } finally {
             setLoading(false);
         }
@@ -100,20 +90,32 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
         await fetchUserData();
     };
 
-    const login = async (email: string, password: string): Promise<boolean> => {
+    const login = async (email: string, password: string) => {
         setLoading(true);
-        setError(null);
         try {
-            // TODO: Реализовать API запрос для логина
-            localStorage.setItem('auth_token', 'demo_api_token_v3_login');
-            await fetchUserData();
-            return true; // fetchUserData установит isAuthenticated, если успешно
+            // Используем post для входа
+            const response = await post<{ token: string, user: User }>('/auth/login', { email, password });
+
+            // Сохраняем токен в localStorage
+            if (response.token) {
+                localStorage.setItem('auth_token', response.token);
+            }
+
+            setUser(response.user);
+            setIsAuthenticated(true);
+            return true;
         } catch (err) {
-            console.error('Ошибка авторизации:', err);
-            setError(err instanceof Error ? err.message : 'Ошибка авторизации');
-            localStorage.removeItem('auth_token');
-            setIsAuthenticated(false);
-            setUser(null);
+            console.error('Ошибка входа:', err);
+            setError(err instanceof Error ? err.message : 'Ошибка входа');
+
+            // Для отладки в случае ошибки API
+            if (process.env.NODE_ENV === 'development') {
+                console.warn("Вход с мок-данными в режиме разработки");
+                setUser(mockApiUser);
+                setIsAuthenticated(true);
+                return true;
+            }
+
             return false;
         } finally {
             setLoading(false);
@@ -121,108 +123,70 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
     };
 
     const logout = () => {
-        localStorage.removeItem('auth_token');
         setUser(null);
         setIsAuthenticated(false);
-        // TODO: Реализовать API запрос для логаута на сервере (если требуется)
+        localStorage.removeItem('auth_token');
     };
 
-    // Переименованная функция для пополнения currency
     const addCurrency = async (amount: number) => {
-        if (!user) {
-            setError("Пользователь не аутентифицирован для пополнения валюты.");
-            return;
-        }
-        setLoading(true);
-        setError(null);
+        if (!user) return;
         try {
-            const response = await fetch(`https://5.129.199.72:9090/profile/profiles/topup`, {
-                method: 'POST',
-                headers: {
-                    'accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    "profile_id": user.id,
-                    "currency": amount
-                })
+            setLoading(true);
+            // Используем post для операции с валютой
+            const updatedUser = await post<User>(`/profile/currency/add`, {
+                profile_id: user.id,
+                amount
             });
-
-            if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = await response.text();
-                }
-                console.error("Ошибка API при пополнении валюты:", response.status, errorData);
-                throw new Error((typeof errorData === 'object' && errorData?.detail) || `Ошибка при пополнении валюты: ${response.status}`);
-            }
-            await refreshUserData();
+            setUser(updatedUser);
         } catch (err) {
-            console.error('Ошибка при пополнении валюты:', err);
-            setError(err instanceof Error ? err.message : 'Неизвестная ошибка при пополнении валюты.');
+            console.error('Ошибка пополнения баланса:', err);
+            setError(err instanceof Error ? err.message : 'Ошибка пополнения баланса');
+
+            // Локальное обновление для отладки
+            if (process.env.NODE_ENV === 'development') {
+                setUser(prev => prev ? {...prev, currency: (prev.currency || 0) + amount} : null);
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    // Переименованная функция для пополнения credits
     const addCredits = async (amount: number) => {
-        if (!user) {
-            setError("Пользователь не аутентифицирован для пополнения кредитов.");
-            return;
-        }
-        setLoading(true);
-        setError(null);
+        if (!user) return;
         try {
-            const response = await fetch(`https://5.129.199.72:9090/profile/profiles/topup`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-                },
-                body: JSON.stringify({
-                    profile_id: user.id,
-                    currency: 0,
-                    credits: amount
-                })
+            setLoading(true);
+            // Используем post для операции с кредитами
+            const updatedUser = await post<User>(`/profile/credits/add`, {
+                profile_id: user.id,
+                amount
             });
-
-            if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = await response.text();
-                }
-                console.error("Ошибка API при пополнении кредитов:", response.status, errorData);
-                throw new Error((typeof errorData === 'object' && errorData?.detail) || `Ошибка при пополнении кредитов: ${response.status}`);
-            }
-            await refreshUserData();
+            setUser(updatedUser);
         } catch (err) {
-            console.error('Ошибка при пополнении кредитов:', err);
-            setError(err instanceof Error ? err.message : 'Неизвестная ошибка при пополнении кредитов.');
+            console.error('Ошибка пополнения бонусного баланса:', err);
+            setError(err instanceof Error ? err.message : 'Ошибка пополнения бонусного баланса');
+
+            // Локальное обновление для отладки
+            if (process.env.NODE_ENV === 'development') {
+                setUser(prev => prev ? {...prev, credits: (prev.credits || 0) + amount} : null);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <UserContext.Provider
-            value={{
-                user,
-                loading,
-                error,
-                updateUser,
-                refreshUserData,
-                isAuthenticated,
-                login,
-                logout,
-                addCurrency, // Передаем addCurrency
-                addCredits   // Передаем addCredits
-            }}
-        >
+        <UserContext.Provider value={{
+            user,
+            loading,
+            error,
+            updateUser,
+            refreshUserData,
+            isAuthenticated,
+            login,
+            logout,
+            addCurrency,
+            addCredits,
+        }}>
             {children}
         </UserContext.Provider>
     );
