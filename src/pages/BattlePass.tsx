@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,20 @@ const BattlePass = () => {
   const { battlePassLevels } = useBattlePass();
   const { dailyTasks } = useDailyTasks();
   const { weeklyTasks } = useWeeklyTasks();
+
+  // Add defensive checks for null values
+  if (!user || !battlePassLevels || !dailyTasks || !weeklyTasks) {
+    return (
+      <BaseLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Загрузка данных...</h2>
+            <p className="text-muted-foreground">Пожалуйста, подождите</p>
+          </div>
+        </div>
+      </BaseLayout>
+    );
+  }
 
   // Calculate current level progress
   const currentLevel = battlePassLevels.find(level => level.level === user.battlePassLevel);

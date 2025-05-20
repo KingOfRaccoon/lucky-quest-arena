@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { vipLevels as mockVipLevels } from "@/data/mockData";
 
@@ -9,7 +10,14 @@ type VipLevelsContextType = {
   updateVipLevel: (level: number, patch: Partial<VipLevel>) => void;
 };
 
-const VipLevelsContext = createContext<VipLevelsContextType | undefined>(undefined);
+// Create a default context value to avoid null checks
+const defaultContextValue: VipLevelsContextType = {
+  vipLevels: mockVipLevels,
+  setVipLevels: () => {},
+  updateVipLevel: () => {},
+};
+
+const VipLevelsContext = createContext<VipLevelsContextType>(defaultContextValue);
 
 export const VipLevelsProvider = ({ children }: { children: ReactNode }) => {
   const [vipLevels, setVipLevels] = useState<VipLevel[]>(mockVipLevels);
