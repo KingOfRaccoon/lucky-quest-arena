@@ -16,11 +16,17 @@ type WeeklyTasksContextType = {
   updateWeeklyTask: (id: number, patch: Partial<WeeklyTask>) => void;
 };
 
+// Общий тип для объединенного контекста
+type TasksContextType = DailyTasksContextType & WeeklyTasksContextType;
+
 const DailyTasksContext = createContext<DailyTasksContextType | undefined>(undefined);
 const WeeklyTasksContext = createContext<WeeklyTasksContextType | undefined>(undefined);
+const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
-export const DailyTasksProvider = ({ children }: { children: ReactNode }) => {
+// Объединенный провайдер для всех задач
+export const TasksProvider = ({ children }: { children: ReactNode }) => {
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>(mockDailyTasks);
+  const [weeklyTasks, setWeeklyTasks] = useState<WeeklyTask[]>(mockWeeklyTasks);
 
   const updateDailyTask = (id: number, patch: Partial<DailyTask>) =>
     setDailyTasks(prev =>
@@ -29,16 +35,6 @@ export const DailyTasksProvider = ({ children }: { children: ReactNode }) => {
       )
     );
 
-  return (
-    <DailyTasksContext.Provider value={{ dailyTasks, setDailyTasks, updateDailyTask }}>
-      {children}
-    </DailyTasksContext.Provider>
-  );
-};
-
-export const WeeklyTasksProvider = ({ children }: { children: ReactNode }) => {
-  const [weeklyTasks, setWeeklyTasks] = useState<WeeklyTask[]>(mockWeeklyTasks);
-
   const updateWeeklyTask = (id: number, patch: Partial<WeeklyTask>) =>
     setWeeklyTasks(prev =>
       prev.map(t =>
@@ -46,20 +42,40 @@ export const WeeklyTasksProvider = ({ children }: { children: ReactNode }) => {
       )
     );
 
+  // Создаем единый объект значений контекста
+  const contextValue: TasksContextType = {
+    dailyTasks,
+    setDailyTasks,
+    updateDailyTask,
+    weeklyTasks,
+    setWeeklyTasks,
+    updateWeeklyTask
+  };
+
   return (
-    <WeeklyTasksContext.Provider value={{ weeklyTasks, setWeeklyTasks, updateWeeklyTask }}>
+    <TasksContext.Provider value={contextValue}>
       {children}
-    </WeeklyTasksContext.Provider>
+    </TasksContext.Provider>
   );
 };
+
+
+// Общий хук для доступа ко всем задачам
+export function useTasks() {
+  const ctx = useContext(TasksContext);
+  if (!ctx) throw new Error("useTasks must be used within TasksProvider");
+  return ctx;
+}
 
 export function useDailyTasks() {
   const ctx = useContext(DailyTasksContext);
   if (!ctx) throw new Error("useDailyTasks must be used within DailyTasksProvider");
   return ctx;
 }
+
 export function useWeeklyTasks() {
   const ctx = useContext(WeeklyTasksContext);
   if (!ctx) throw new Error("useWeeklyTasks must be used within WeeklyTasksProvider");
   return ctx;
 }
+

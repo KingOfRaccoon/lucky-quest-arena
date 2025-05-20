@@ -9,9 +9,9 @@ import { LotteriesProvider } from './LotteriesContext';
 import { MiniGamesProvider } from './MiniGamesContext';
 import { UserTicketsProvider } from './UserTicketsContext';
 import { BalanceProvider } from './BalanceContext';
-import { TasksProvider } from './TasksContext';
 import { BattlePassProvider } from './BattlePassContext';
 import { VipLevelsProvider } from './VIPLevelsContext';
+import { TasksProvider } from "@/TasksContext.tsx";
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
