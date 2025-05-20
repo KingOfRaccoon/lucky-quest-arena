@@ -53,7 +53,7 @@ const BossMonsterGame = () => {
   const startGame = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/minigame/play`, {
+      const response = await fetch(`https://5.129.199.72:9090/minigame/play`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +86,7 @@ const BossMonsterGame = () => {
   const fetchGameParams = async (id: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/minigame/params/${id}`);
+      const response = await fetch(`https://5.129.199.72:9090/minigame/params/${id}`);
 
       if (!response.ok) {
         throw new Error("Ошибка при получении параметров игры");
@@ -165,7 +165,7 @@ const BossMonsterGame = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/minigame/picks/${gameId}`, {
+      const response = await fetch(`https://5.129.199.72:9090/minigame/picks/${gameId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -207,7 +207,7 @@ const BossMonsterGame = () => {
   const fetchGameResults = async (id: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/minigame/results/${id}`);
+      const response = await fetch(`https://5.129.199.72:9090/minigame/results/${id}`);
 
       if (!response.ok) {
         throw new Error("Ошибка при получении результатов игры");
@@ -237,150 +237,54 @@ const BossMonsterGame = () => {
   // Рендеринг начального экрана
   if (gameState === "initial") {
     return (
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Босс Монстр</h1>
-        <div className="max-w-md mx-auto bg-card p-6 rounded-xl shadow-md">
-          <h2 className="text-lg font-semibold mb-4">Начать новую игру</h2>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Ваша ставка (кредиты)</label>
-            <input
-              type="number"
-              min="1"
-              value={betAmount}
-              onChange={(e) => setBetAmount(Number(e.target.value))}
-              className="w-full p-2 border rounded-md"
-            />
+      <BaseLayout>
+        <div className="container mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-6">Босс Монстр</h1>
+          <div className="max-w-md mx-auto bg-card p-6 rounded-xl shadow-md">
+            <h2 className="text-lg font-semibold mb-4">Начать новую игру</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Ваша ставка (кредиты)</label>
+              <input
+                type="number"
+                min="1"
+                value={betAmount}
+                onChange={(e) => setBetAmount(Number(e.target.value))}
+                className="w-full p-2 border rounded-md"
+              />
+            </div>
+            <Button
+              onClick={startGame}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? "Загрузка..." : "Начать игру"}
+            </Button>
           </div>
-          <Button
-            onClick={startGame}
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? "Загрузка..." : "Начать игру"}
-          </Button>
         </div>
-      </div>
+      </BaseLayout>
     );
   }
 
   // Рендеринг игрового экрана
   if (gameState === "playing" && gameParams) {
     return (
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Босс Монстр - Битва</h1>
+      <BaseLayout>
+        <div className="container mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-6">Босс Монстр - Битва</h1>
 
-        <div className="mb-4 p-2 bg-muted rounded-md text-center">
-          <p className="font-medium">До окончания битвы осталось: {timeLeft}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Ваши герои</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {gameParams.heroes.map(hero => (
-                <Card
-                  key={hero.id}
-                  className={`p-2 cursor-pointer transition-all ${selectedHeroes.includes(hero.id) ? 'ring-2 ring-primary' : ''}`}
-                  onClick={() => toggleHeroSelection(hero.id)}
-                >
-                  <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
-                    <img
-                      src={hero.image_url || '/placeholder.svg'}
-                      alt={hero.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <h3 className="font-medium text-sm">{hero.name}</h3>
-                  <div className="grid grid-cols-3 gap-1 mt-2 text-xs">
-                    <div className="flex flex-col items-center">
-                      <span className="text-muted-foreground">СИЛ</span>
-                      <span>{hero.strength}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-muted-foreground">ЛОВ</span>
-                      <span>{hero.dexterity}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-muted-foreground">ИНТ</span>
-                      <span>{hero.intelligence}</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+          <div className="mb-4 p-2 bg-muted rounded-md text-center">
+            <p className="font-medium">До окончания битвы осталось: {timeLeft}</p>
           </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Монстры</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {gameParams.monsters.map(monster => (
-                <Card key={monster.id} className="p-2">
-                  <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
-                    <img
-                      src={`/monster-type-${monster.type}.svg`}
-                      alt={`Монстр #${monster.id}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </div>
-                  <h3 className="font-medium text-sm">Монстр #{monster.id}</h3>
-                  <div className="mt-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Сила:</span>
-                      <span>???</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-center">
-          <Button
-            onClick={submitPicks}
-            disabled={isLoading || selectedHeroes.length !== 3}
-            size="lg"
-            className="px-8"
-          >
-            {isLoading ? "Отправка..." : "В бой!"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Рендеринг экрана с результатами
-  if (gameState === "results" && gameResults) {
-    return (
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Босс Монстр - Результаты</h1>
-
-        <div className="mb-6 p-4 bg-card rounded-xl shadow-md text-center">
-          <h2 className="text-xl font-semibold mb-2">Итоги битвы</h2>
-          <p className="text-3xl font-bold mb-4">
-            {gameResults.battles_won.filter(Boolean).length > gameResults.battles_won.length / 2
-              ? "Победа!"
-              : "Поражение!"}
-          </p>
-          <p className="text-lg">
-            Ваша награда: <span className="font-bold text-primary">{gameResults.reward_credits} кредитов</span>
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Ваши герои</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {gameResults.heroes
-                .filter(hero => gameResults.picks.includes(hero.id))
-                .map((hero, index) => (
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Ваши герои</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {gameParams.heroes.map(hero => (
                   <Card
                     key={hero.id}
-                    className={`p-2 ${gameResults.battles_won[index] ? 'bg-green-50' : 'bg-red-50'}`}
+                    className={`p-2 cursor-pointer transition-all ${selectedHeroes.includes(hero.id) ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => toggleHeroSelection(hero.id)}
                   >
                     <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
                       <img
@@ -404,76 +308,180 @@ const BossMonsterGame = () => {
                         <span>{hero.intelligence}</span>
                       </div>
                     </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Монстры</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {gameParams.monsters.map(monster => (
+                  <Card key={monster.id} className="p-2">
+                    <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
+                      <img
+                        src={`/monster-type-${monster.type}.svg`}
+                        alt={`Монстр #${monster.id}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                    <h3 className="font-medium text-sm">Монстр #{monster.id}</h3>
+                    <div className="mt-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Сила:</span>
+                        <span>???</span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <Button
+              onClick={submitPicks}
+              disabled={isLoading || selectedHeroes.length !== 3}
+              size="lg"
+              className="px-8"
+            >
+              {isLoading ? "Отправка..." : "В бой!"}
+            </Button>
+          </div>
+        </div>
+      </BaseLayout>
+    );
+  }
+
+  // Рендеринг экрана с результатами
+  if (gameState === "results" && gameResults) {
+    return (
+      <BaseLayout>
+        <div className="container mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-6">Босс Монстр - Результаты</h1>
+
+          <div className="mb-6 p-4 bg-card rounded-xl shadow-md text-center">
+            <h2 className="text-xl font-semibold mb-2">Итоги битвы</h2>
+            <p className="text-3xl font-bold mb-4">
+              {gameResults.battles_won.filter(Boolean).length > gameResults.battles_won.length / 2
+                ? "Победа!"
+                : "Поражение!"}
+            </p>
+            <p className="text-lg">
+              Ваша награда: <span className="font-bold text-primary">{gameResults.reward_credits} кредитов</span>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Ваши герои</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {gameResults.heroes
+                  .filter(hero => gameResults.picks.includes(hero.id))
+                  .map((hero, index) => (
+                    <Card
+                      key={hero.id}
+                      className={`p-2 ${gameResults.battles_won[index] ? 'bg-green-50' : 'bg-red-50'}`}
+                    >
+                      <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
+                        <img
+                          src={hero.image_url || '/placeholder.svg'}
+                          alt={hero.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <h3 className="font-medium text-sm">{hero.name}</h3>
+                      <div className="grid grid-cols-3 gap-1 mt-2 text-xs">
+                        <div className="flex flex-col items-center">
+                          <span className="text-muted-foreground">СИЛ</span>
+                          <span>{hero.strength}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-muted-foreground">ЛОВ</span>
+                          <span>{hero.dexterity}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-muted-foreground">ИНТ</span>
+                          <span>{hero.intelligence}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-center">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${gameResults.battles_won[index] ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                          {gameResults.battles_won[index] ? 'Победа' : 'Поражение'}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Монстры</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {gameResults.monsters.slice(0, 3).map((monster, index) => (
+                  <Card
+                    key={monster.id}
+                    className={`p-2 ${!gameResults.battles_won[index] ? 'bg-green-50' : 'bg-red-50'}`}
+                  >
+                    <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
+                      <img
+                        src={`/monster-type-${monster.type}.svg`}
+                        alt={`Монстр #${monster.id}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    </div>
+                    <h3 className="font-medium text-sm">Монстр #{monster.id}</h3>
+                    <div className="mt-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Сила:</span>
+                        <span>{monster.power}</span>
+                      </div>
+                    </div>
                     <div className="mt-2 text-center">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded ${gameResults.battles_won[index] ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                        {gameResults.battles_won[index] ? 'Победа' : 'Поражение'}
+                      <span className={`text-xs font-semibold px-2 py-1 rounded ${!gameResults.battles_won[index] ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                        {!gameResults.battles_won[index] ? 'Победа' : 'Поражение'}
                       </span>
                     </div>
                   </Card>
                 ))}
+              </div>
             </div>
           </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Монстры</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {gameResults.monsters.slice(0, 3).map((monster, index) => (
-                <Card
-                  key={monster.id}
-                  className={`p-2 ${!gameResults.battles_won[index] ? 'bg-green-50' : 'bg-red-50'}`}
-                >
-                  <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden">
-                    <img
-                      src={`/monster-type-${monster.type}.svg`}
-                      alt={`Монстр #${monster.id}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </div>
-                  <h3 className="font-medium text-sm">Монстр #{monster.id}</h3>
-                  <div className="mt-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Сила:</span>
-                      <span>{monster.power}</span>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-center">
-                    <span className={`text-xs font-semibold px-2 py-1 rounded ${!gameResults.battles_won[index] ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                      {!gameResults.battles_won[index] ? 'Победа' : 'Поражение'}
-                    </span>
-                  </div>
-                </Card>
-              ))}
-            </div>
+          <div className="flex justify-center">
+            <Button
+              onClick={() => {
+                setGameState("initial");
+                setSelectedHeroes([]);
+                setGameParams(null);
+                setGameResults(null);
+                navigate("/?tab=minigames");
+              }}
+              size="lg"
+              className="px-8"
+            >
+              Играть снова
+            </Button>
           </div>
         </div>
-
-        <div className="flex justify-center">
-          <Button
-            onClick={() => {
-              setGameState("initial");
-              setSelectedHeroes([]);
-              setGameParams(null);
-              setGameResults(null);
-              navigate("/mini-games/boss-monster");
-            }}
-            size="lg"
-            className="px-8"
-          >
-            Играть снова
-          </Button>
-        </div>
-      </div>
+      </BaseLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 text-center">
-      <p>Загрузка...</p>
-    </div>
+    <BaseLayout>
+      <div className="container mx-auto p-4 text-center">
+        <p>Загрузка...</p>
+      </div>
+    </BaseLayout>
   );
 };
 
