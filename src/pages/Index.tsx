@@ -9,16 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Ticket, Gift, Crown, Trophy, Clock, ArrowRight, User } from "lucide-react";
 import { useUser } from "@/UserContext";
 import { useBattlePass } from "@/BattlePassContext";
-import { useDailyTasks } from "@/TasksContext";
 import { useMiniGames } from "@/MiniGamesContext";
 import {Lottery, useLotteries} from "@/LotteriesContext.tsx";
+import {useTasks} from "@/TasksContext.tsx";
 
 const Index = () => {
   const [countdown, setCountdown] = useState({ minutes: 0, seconds: 0 });
   const { lotteries, loading, error } = useLotteries(); // Добавил loading и error
   const { user } = useUser();
   const { battlePassLevels } = useBattlePass();
-  const { dailyTasks } = useDailyTasks();
+  const { dailyTasks } = useTasks();
   const { miniGames } = useMiniGames();
   const [nextLottery, setNextLottery] = useState<Lottery | null>(null); // Изменил тип и начальное значение
 

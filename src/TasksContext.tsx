@@ -66,16 +66,3 @@ export function useTasks() {
   if (!ctx) throw new Error("useTasks must be used within TasksProvider");
   return ctx;
 }
-
-export function useDailyTasks() {
-  const ctx = useContext(DailyTasksContext);
-  if (!ctx) throw new Error("useDailyTasks must be used within DailyTasksProvider");
-  return ctx;
-}
-
-export function useWeeklyTasks() {
-  const ctx = useContext(WeeklyTasksContext);
-  if (!ctx) throw new Error("useWeeklyTasks must be used within WeeklyTasksProvider");
-  return ctx;
-}
-

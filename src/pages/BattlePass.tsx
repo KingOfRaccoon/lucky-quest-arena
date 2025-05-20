@@ -253,14 +253,16 @@ const BattlePass = () => {
                             ? 'bg-primary/10' 
                             : isCurrent
                               ? 'bg-gray-100 border border-primary/30'
-                              : 'bg-gray-100'
+                              : level.for_vip 
+                                ? 'bg-amber-50 border border-amber-200'
+                                : 'bg-gray-100'
                         }`}>
                           <div className="text-center mb-2">
                             <Badge variant={isCompleted ? "default" : "outline"}>
                               Уровень {level.level}
                             </Badge>
                             {level.for_vip && (
-                              <Badge variant="secondary" className="ml-2">
+                              <Badge variant={isCompleted ? "default" : "secondary"} className="ml-2 bg-amber-200 text-amber-900">
                                 VIP
                               </Badge>
                             )}
