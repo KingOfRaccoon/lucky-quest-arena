@@ -45,7 +45,7 @@ export const BattlePassProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://5.129.199.72:9090/battlepass/view', {
+      const response = await fetch(`https://5.129.199.72:9090/battlepass/view`, {
         method: 'POST'
       });
 

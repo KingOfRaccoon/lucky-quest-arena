@@ -2,6 +2,7 @@ import React, {createContext, useContext, useState, useEffect, ReactNode} from "
 // Мок-данные пользователя пока оставим для возможной отладки
 import {user as mockUserData} from "@/data/mockData";
 import {max} from "date-fns";
+import {API_BASE_URL} from "@/config/api.ts";
 
 // Обновленный интерфейс для пользователя на основе данных API
 export interface User {
@@ -49,7 +50,7 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('http://5.129.199.72:9090/profile/profiles/1', {
+            const response = await fetch(`https://5.129.199.72:9090/profile/profiles/1`, {
                 headers: {
                     'Content-Type': 'application/json',
                     // 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` // Раскомментировать при необходимости
@@ -135,7 +136,7 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('http://5.129.199.72:9090/profile/profiles/topup', {
+            const response = await fetch(`https://5.129.199.72:9090/profile/profiles/topup`, {
                 method: 'POST',
                 headers: {
                     'accept': 'application/json',
@@ -175,7 +176,7 @@ export const UserProvider = ({children}: { children: ReactNode }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('http://5.129.199.72:9090/profile/profiles/topup', {
+            const response = await fetch(`https://5.129.199.72:9090/profile/profiles/topup`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

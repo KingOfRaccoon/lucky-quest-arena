@@ -1,5 +1,6 @@
 import React, {createContext, useContext, useState, useEffect, ReactNode} from "react";
 import {lotteries as mockLotteries} from "@/data/mockData";
+import {API_BASE_URL} from "@/config/api.ts";
 
 // Новый тип для лотереи согласно формату API
 export type Lottery = {
@@ -64,7 +65,7 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetch('http://5.129.199.72:9090/lottery/draws');
+            const response = await fetch(`https://5.129.199.72:9090/lottery/draws`);
 
             if (!response.ok) {
                 throw new Error(`Ошибка: ${response.status}`);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,12 +15,22 @@ import {useTasks} from "@/TasksContext.tsx";
 
 const Index = () => {
   const [countdown, setCountdown] = useState({ minutes: 0, seconds: 0 });
-  const { lotteries, loading, error } = useLotteries(); // Добавил loading и error
+  const { lotteries, loading, error } = useLotteries();
   const { user } = useUser();
   const { battlePassLevels } = useBattlePass();
   const { dailyTasks } = useTasks();
   const { miniGames } = useMiniGames();
-  const [nextLottery, setNextLottery] = useState<Lottery | null>(null); // Изменил тип и начальное значение
+  const [nextLottery, setNextLottery] = useState<Lottery | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Получаем активную вкладку из URL-параметра или используем "lotteries" по умолчанию
+  const activeTab = searchParams.get("tab") || "lotteries";
+
+  // Функция для обновления активной вкладки
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
 
   // Calculate time until next draw
   useEffect(() => {
@@ -231,7 +241,7 @@ const Index = () => {
 
       {/* Lotteries & Games Tabs */}
       <section className="mb-12">
-        <Tabs defaultValue="lotteries" className="w-full">
+        <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Игры и лотереи</h2>
             <TabsList>
