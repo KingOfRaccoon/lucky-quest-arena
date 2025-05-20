@@ -103,7 +103,7 @@ const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
 
   return (
     <div className="mb-6">
-      {lottery.lottery_type_id === 2 ? (
+      {lottery.lottery_type_id === 1 ? (
         <CarNumberSelection
           selectedLetter={selectedLetter}
           setSelectedLetter={setSelectedLetter}

@@ -8,6 +8,7 @@ import BattlePass from "@/pages/BattlePass";
 import BuyCurrency from "@/pages/BuyCurrency";
 import NotFound from "@/pages/NotFound";
 import WordleGamePage from "@/pages/WordleGame";
+import BossMonsterGame from "@/pages/BossMonsterGame";
 import {Routes, Route} from "react-router-dom";
 import {Toaster} from "sonner";
 
@@ -21,7 +22,9 @@ function App() {
                 <Route path="/results" element={<LotteryResults/>}/>
                 <Route path="/profile" element={<UserProfile/>}/>
                 <Route path="/mini-games" element={<MiniGames/>}/>
-                <Route path="/mini-game/4" element={<WordleGamePage/>}/>
+                <Route path="/mini-games/4" element={<WordleGamePage/>}/>
+                <Route path="/mini-games/5" element={<BossMonsterGame/>}/>
+                <Route path="/mini-games/5/:gameId" element={<BossMonsterGame/>}/>
                 <Route path="/mini-game/:id" element={<MiniGames/>}/>
                 <Route path="/battle-pass" element={<BattlePass/>}/>
                 <Route path="/buy-currency" element={<BuyCurrency/>}/>

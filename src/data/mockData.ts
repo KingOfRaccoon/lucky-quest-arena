@@ -129,6 +129,15 @@ export const miniGames = [
     averagePlayTime: "3 минуты",
     popularity: 4.9,
   },
+  {
+    id: 5,
+    name: "Босс Монстр",
+    description: "Выберите героев и сразитесь с монстрами за ценные призы",
+    image: "/placeholder.svg",
+    bonusReward: "50-300 бонусных монет",
+    averagePlayTime: "5 минут",
+    popularity: 4.8,
+  },
 ];
 
 export const battlePassLevels = [

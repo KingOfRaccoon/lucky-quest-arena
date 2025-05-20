@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,21 +13,22 @@ const MiniGames = () => {
   const { miniGames } = useMiniGames();
   const params = useParams();
   const gameId = params.id;
-  
+  const navigate = useNavigate();
+
   // Check if we should show a specific game
-  if (gameId && Number(gameId) === 4) {
-    return (
-      <BaseLayout>
-        <section className="mb-12">
-          <h1 className="text-3xl font-bold mb-2">Wordle</h1>
-          <p className="text-gray-500 mb-6">
-            Угадайте слово из 5 букв за 6 попыток
-          </p>
-          
-          <WordleGame />
-        </section>
-      </BaseLayout>
-    );
+  if (gameId) {
+    const numericId = Number(gameId);
+
+    // Для Wordle (ID = 4) и Босс Монстр (ID = 5) перенаправляем на их выделенные маршруты
+    if (numericId === 4) {
+      navigate("/mini-games/4");
+      return null;
+    }
+
+    if (numericId === 5) {
+      navigate("/mini-games/5");
+      return null;
+    }
   }
   
   // This is a placeholder as we only have one category in the mock data
