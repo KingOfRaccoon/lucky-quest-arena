@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { battlePassLevels as mockBattlePassLevels } from "@/data/mockData";
 
@@ -9,7 +10,14 @@ type BattlePassContextType = {
   updateBattlePassLevel: (level: number, patch: Partial<BattlePassLevel>) => void;
 };
 
-const BattlePassContext = createContext<BattlePassContextType | undefined>(undefined);
+// Create a default context value to avoid null checks
+const defaultContextValue: BattlePassContextType = {
+  battlePassLevels: mockBattlePassLevels,
+  setBattlePassLevels: () => {},
+  updateBattlePassLevel: () => {},
+};
+
+const BattlePassContext = createContext<BattlePassContextType>(defaultContextValue);
 
 export const BattlePassProvider = ({ children }: { children: ReactNode }) => {
   const [battlePassLevels, setBattlePassLevels] = useState<BattlePassLevel[]>(mockBattlePassLevels);
