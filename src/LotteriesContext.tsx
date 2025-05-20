@@ -20,12 +20,35 @@ export type Lottery = {
     is_active: boolean;
 };
 
+// Тип для результата розыгрыша лотереи
+export type LotteryResult = {
+    winning_str: string;
+    reward_amount: number;
+    message: string;
+};
+
+export type ResultLottery = {
+    "winning_str": string;
+    "reward_amount": number;
+    "message": string
+};
+
 // Тип для сгруппированной лотереи
 export type GroupedLottery = {
     name: string; // Название лотереи
     draws: Lottery[]; // Все розыгрыши данной лотереи
     nextDraw: Lottery; // Ближайший розыгрыш
     totalDraws: number; // Общее количество розыгрышей
+    type: number; // Тип лотереи
+    isActive: boolean; // Активна ли лотерея
+};
+
+// Тип для параметров фильтрации лотерей
+export type LotteryFilterParams = {
+    activeOnly?: boolean;
+    type?: number;
+    sortBy?: 'date' | 'price' | 'name';
+    sortDirection?: 'asc' | 'desc';
 };
 
 // Тип для билета из API
@@ -83,6 +106,12 @@ type LotteriesContextType = {
     // Методы для работы с группировкой лотерей
     getLotteryDraws: (lotteryName: string) => Lottery[];
     getNextDrawByLotteryName: (lotteryName: string) => Lottery | undefined;
+
+    // Новые методы для фильтрации и группировки
+    getFilteredLotteries: (params?: LotteryFilterParams) => Lottery[];
+    getFilteredGroupedLotteries: (params?: LotteryFilterParams) => GroupedLottery[];
+    getLotteriesByType: (type: number) => Lottery[];
+    getPopularLotteries: (limit?: number) => GroupedLottery[];
 
     // Новые методы для работы с билетами
     userTickets: EnrichedTicket[];
@@ -144,14 +173,109 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
                 (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
             );
 
+            // Определяем тип лотереи (берем из первого розыгрыша)
+            const type = sortedDraws[0]?.lottery_type_id || 0;
+
+            // Проверяем, активна ли лотерея (хотя бы один розыгрыш активен)
+            const isActive = sortedDraws.some(draw => draw.is_active);
+
             return {
                 name,
                 draws: sortedDraws,
                 nextDraw: sortedDraws[0], // Первый розыгрыш после сортировки - ближайший
-                totalDraws: sortedDraws.length
+                totalDraws: sortedDraws.length,
+                type,
+                isActive
             };
         });
     }, [lotteries]);
+
+    // Фильтрация лотерей по разным критериям
+    const getFilteredLotteries = (params?: LotteryFilterParams): Lottery[] => {
+        if (!params) return lotteries;
+
+        let filtered = [...lotteries];
+
+        // Фильтрация только активных лотерей
+        if (params.activeOnly) {
+            filtered = filtered.filter(lottery => lottery.is_active);
+        }
+
+        // Фильтрация по типу лотереи
+        if (params.type !== undefined) {
+            filtered = filtered.filter(lottery => lottery.lottery_type_id === params.type);
+        }
+
+        // Сортировка по разным критериям
+        if (params.sortBy) {
+            const direction = params.sortDirection === 'desc' ? -1 : 1;
+
+            switch (params.sortBy) {
+                case 'date':
+                    filtered.sort((a, b) => direction * (new Date(a.end_date).getTime() - new Date(b.end_date).getTime()));
+                    break;
+                case 'price':
+                    filtered.sort((a, b) => direction * (a.price_currency - b.price_currency));
+                    break;
+                case 'name':
+                    filtered.sort((a, b) => direction * (a.name.localeCompare(b.name)));
+                    break;
+            }
+        }
+
+        return filtered;
+    };
+
+    // Получение отфильтрованных и сгруппированных лотерей
+    const getFilteredGroupedLotteries = (params?: LotteryFilterParams): GroupedLottery[] => {
+        // Сначала применяем фильтрацию
+        const filteredLotteries = getFilteredLotteries(params);
+
+        if (!filteredLotteries.length) return [];
+
+        const lotteryGroups: { [key: string]: Lottery[] } = {};
+
+        // Группируем фильтрованные розыгрыши по названию лотереи
+        filteredLotteries.forEach(lottery => {
+            if (!lotteryGroups[lottery.name]) {
+                lotteryGroups[lottery.name] = [];
+            }
+            lotteryGroups[lottery.name].push(lottery);
+        });
+
+        // Преобразуем в массив сгруппированных лотерей
+        return Object.entries(lotteryGroups).map(([name, draws]) => {
+            const sortedDraws = [...draws].sort(
+                (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
+            );
+
+            const type = sortedDraws[0]?.lottery_type_id || 0;
+            const isActive = sortedDraws.some(draw => draw.is_active);
+
+            return {
+                name,
+                draws: sortedDraws,
+                nextDraw: sortedDraws[0],
+                totalDraws: sortedDraws.length,
+                type,
+                isActive
+            };
+        });
+    };
+
+    // Получение лотерей определенного типа
+    const getLotteriesByType = (type: number): Lottery[] => {
+        return lotteries.filter(lottery => lottery.lottery_type_id === type);
+    };
+
+    // Получение популярных лотерей (на основе количества розыгрышей)
+    const getPopularLotteries = (limit?: number): GroupedLottery[] => {
+        // Сортируем группированные лотереи по количеству розыгрышей (от большего к меньшему)
+        const sorted = [...groupedLotteries].sort((a, b) => b.totalDraws - a.totalDraws);
+
+        // Возвращаем либо все, либо ограниченное количество
+        return limit ? sorted.slice(0, limit) : sorted;
+    };
 
     // Получение всех розыгрышей конкретной лотереи, отсортированных по дате
     const getLotteryDraws = (lotteryName: string): Lottery[] => {
@@ -176,7 +300,7 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
             setTicketsLoading(true);
             setTicketsError(null);
 
-            // Заменяем прямой вызов fetch на вызов через api-сервис с логирование��
+            // Заменяем прямой вызов fetch на вызов через api-сервис с логированием
             const data = await post<{ tickets: Ticket[] }>('/tickets/list', { profile_id: profileId });
 
             // Обогащаем билеты информацией о лотерее
@@ -254,7 +378,13 @@ export const LotteriesProvider = ({children}: { children: ReactNode }) => {
             ticketsLoading,
             ticketsError,
             fetchUserTickets,
-            getLotteryByDrawId
+            getLotteryByDrawId,
+
+            // Новые методы для фильтрации и группировки
+            getFilteredLotteries,
+            getFilteredGroupedLotteries,
+            getLotteriesByType,
+            getPopularLotteries
         }}>
             {children}
         </LotteriesContext.Provider>

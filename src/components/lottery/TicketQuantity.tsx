@@ -18,19 +18,23 @@ const TicketQuantity = ({
   paymentMethod = 'currency',
   setPaymentMethod
 }: TicketQuantityProps) => {
+  // Проверка наличия объекта lottery и его свойств
+  const price_currency = lottery?.price_currency || 0;
+  const price_credits = lottery?.price_credits || 0;
+  const bonus_credit = lottery?.bonus_credit || 0;
 
-  const showPaymentSelector = lottery.price_currency > 0 && lottery.price_credits > 0 && setPaymentMethod;
-  const canPayWithCurrency = lottery.price_currency > 0;
-  const canPayWithCredits = lottery.price_credits > 0;
+  const showPaymentSelector = price_currency > 0 && price_credits > 0 && setPaymentMethod;
+  const canPayWithCurrency = price_currency > 0;
+  const canPayWithCredits = price_credits > 0;
 
   // Расчет итоговой суммы в зависимости от способа оплаты
   const calculateTotal = () => {
     if (paymentMethod === 'currency' && canPayWithCurrency) {
-      return `${lottery.price_currency * ticketCount} ₽`;
+      return `${price_currency * ticketCount} ₽`;
     } else if (paymentMethod === 'credits' && canPayWithCredits) {
-      return `${lottery.price_credits * ticketCount} баллов`;
-    } else if (lottery.bonus_credit) {
-      return `${lottery.bonus_credit * ticketCount} бонусов`;
+      return `${price_credits * ticketCount} баллов`;
+    } else if (bonus_credit) {
+      return `${bonus_credit * ticketCount} бонусов`;
     } else {
       return "Бесплатно";
     }
@@ -39,11 +43,11 @@ const TicketQuantity = ({
   // Отображение цены за один билет
   const getTicketPrice = () => {
     if (paymentMethod === 'currency' && canPayWithCurrency) {
-      return `${lottery.price_currency} ₽`;
+      return `${price_currency} ₽`;
     } else if (paymentMethod === 'credits' && canPayWithCredits) {
-      return `${lottery.price_credits} баллов`;
-    } else if (lottery.bonus_credit) {
-      return `${lottery.bonus_credit} бонусов`;
+      return `${price_credits} баллов`;
+    } else if (bonus_credit) {
+      return `${bonus_credit} бонусов`;
     } else {
       return "Бесплатно";
     }
@@ -87,7 +91,7 @@ const TicketQuantity = ({
               <div className="flex flex-col items-center justify-center h-full">
                 <CreditCard className={`h-6 w-6 mb-2 ${paymentMethod === 'currency' ? 'text-white' : 'text-primary'}`} />
                 <div className="font-medium">Рубли</div>
-                <div className="text-sm mt-1">{lottery.price_currency} ₽</div>
+                <div className="text-sm mt-1">{price_currency} ₽</div>
               </div>
             </div>
 
@@ -102,7 +106,7 @@ const TicketQuantity = ({
               <div className="flex flex-col items-center justify-center h-full">
                 <Coins className={`h-6 w-6 mb-2 ${paymentMethod === 'credits' ? 'text-white' : 'text-primary'}`} />
                 <div className="font-medium">Баллы</div>
-                <div className="text-sm mt-1">{lottery.price_credits} баллов</div>
+                <div className="text-sm mt-1">{price_credits} баллов</div>
               </div>
             </div>
           </div>

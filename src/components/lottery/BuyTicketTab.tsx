@@ -162,25 +162,18 @@ const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
       <div className="p-4 md:p-6">
         <h2 className="text-xl font-bold mb-6">Купить билет</h2>
 
-        {/* Секция выбора количества билетов */}
-        <TicketQuantity
-          count={ticketCount}
-          onChange={handleTicketCountChange}
-          className="mb-6"
-        />
-
         {/* Выбор комбинации для обычной лотереи */}
-        {lottery.lottery_type_id === 1 && (
+        {lottery.lottery_type_id === 2 && (
           <NumberSelection
-            maxSelections={maxSelectionOptions}
             numberOptions={numberOptions}
+            maxSelectionOptions={maxSelectionOptions}
             selectedNumbers={selectedNumbers}
             setSelectedNumbers={setSelectedNumbers}
           />
         )}
 
         {/* Выбор автомобильного номера для специальной лотереи */}
-        {lottery.lottery_type_id === 2 && (
+        {lottery.lottery_type_id === 1 && (
           <div>
             {carNumbersData.map((data, index) => (
               <div key={index} className="mb-6">
@@ -203,26 +196,17 @@ const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
           </div>
         )}
 
+        {/* Секция выбора количества билетов */}
+        <TicketQuantity
+            lottery={lottery}
+            ticketCount={ticketCount}
+            handleTicketCountChange={handleTicketCountChange}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+        />
+
         {/* Секция покупки билета */}
         <div className="mt-6">
-          <div className="flex gap-2 mb-4">
-            <Button
-              variant={paymentMethod === 'currency' ? 'default' : 'outline'}
-              onClick={() => setPaymentMethod('currency')}
-              disabled={lottery.price_currency <= 0}
-              className="flex-1"
-            >
-              Валюта
-            </Button>
-            <Button
-              variant={paymentMethod === 'credits' ? 'default' : 'outline'}
-              onClick={() => setPaymentMethod('credits')}
-              disabled={lottery.price_credits <= 0}
-              className="flex-1"
-            >
-              Баллы
-            </Button>
-          </div>
           <Button
             onClick={handleBuyTicket}
             className="w-full"

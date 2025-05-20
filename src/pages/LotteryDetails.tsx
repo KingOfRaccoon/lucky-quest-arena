@@ -22,46 +22,81 @@ import LotteryInfo from "@/components/lottery/LotteryInfo";
 import BuyTicketTab from "@/components/lottery/BuyTicketTab";
 import LotteryRules from "@/components/lottery/LotteryRules";
 import MiniGamesList from "@/components/lottery/MiniGamesList";
-import { Lottery, useLotteries } from "@/LotteriesContext.tsx";
+import { Lottery, LotteryResult, useLotteries } from "@/LotteriesContext.tsx";
 
 const LotteryDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const { lotteries, refreshLotteries, getLotteryDraws } = useLotteries();
+  const { lotteries, refreshLotteries, getLotteryDraws, getLotteryByDrawId } = useLotteries();
   const [lottery, setLottery] = useState<Lottery | null>(null);
   const [allDraws, setAllDraws] = useState<Lottery[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  // Состояние для отслеживания загрузки данных из контекста
+  const [lotteriesLoaded, setLotteriesLoaded] = useState<boolean>(false);
+  // Состояние для хранения результатов лотереи
+  const [lotteryResult, setLotteryResult] = useState<LotteryResult | null>(null);
+  const [resultLoading, setResultLoading] = useState<boolean>(false);
+
+  // Отслеживаем изменения в lotteries из контекста
+  useEffect(() => {
+    if (lotteries.length > 0) {
+      setLotteriesLoaded(true);
+    }
+  }, [lotteries]);
 
   useEffect(() => {
-    const fetchLottery = async () => {
-      setLoading(true);
+    const fetchLotteryData = async () => {
+      if (!id) return;
 
+      setLoading(true);
       try {
-        // Если список лотерей пуст, запросим его через API-сервис с логированием
+        // Проверяем наличие лотерей в контексте, иначе загружаем их
         if (lotteries.length === 0) {
+          console.log("Лотереи не загружены, загружаем...");
           await refreshLotteries();
+          return; // Выходим и ждем повторного выполнения эффекта после обновления lotteries
         }
 
-        // Если нужно получить конкретную лотерею напрямую, используем API-сервис
-        if (id) {
-          try {
-            // Используем get запрос вместо прямого fetch для логирования
-            const lotteryData = await get<Lottery>(`/lottery/draws/${id}`);
-            setLottery(lotteryData);
+        console.log("Ищем лотерею с ID:", Number(id));
+        const lotteryFromContext = getLotteryByDrawId(Number(id));
 
-            // Получаем все розыгрыши текущей лотереи
-            if (lotteryData) {
-              const lotteryDraws = getLotteryDraws(lotteryData.name);
-              setAllDraws(lotteryDraws);
+        if (lotteryFromContext) {
+          console.log("Лотерея найдена в контексте:", lotteryFromContext);
+          setLottery(lotteryFromContext);
+
+          // Получаем все розыгрыши текущей лотереи
+          const lotteryDraws = getLotteryDraws(lotteryFromContext.name);
+          setAllDraws(lotteryDraws);
+
+          // Если лотерея уже завершена, запрашиваем её результаты
+          const now = new Date();
+          const endDate = new Date(lotteryFromContext.end_date);
+
+          if (now > endDate) {
+            await fetchLotteryResult(Number(id));
+          }
+        } else {
+          console.log("Лотерея не найдена в контексте, обновляем данные...");
+          // Повторная попытка обновления лотерей, если она не найдена
+          await refreshLotteries();
+
+          // Проверяем еще раз после обновления
+          const updatedLottery = getLotteryByDrawId(Number(id));
+
+          if (updatedLottery) {
+            console.log("Лотерея найдена после обновления:", updatedLottery);
+            setLottery(updatedLottery);
+            const lotteryDraws = getLotteryDraws(updatedLottery.name);
+            setAllDraws(lotteryDraws);
+
+            // Проверка для завершенных лотерей
+            const now = new Date();
+            const endDate = new Date(updatedLottery.end_date);
+
+            if (now > endDate) {
+              await fetchLotteryResult(Number(id));
             }
-          } catch (e) {
-            console.error("Error fetching specific lottery:", e);
-            // Вернемся к поиску в списке лотерей, если API недоступен
-            const foundLottery = lotteries.find((l) => l.id === Number(id));
-            if (foundLottery) {
-              setLottery(foundLottery);
-              const lotteryDraws = getLotteryDraws(foundLottery.name);
-              setAllDraws(lotteryDraws);
-            }
+          } else {
+            console.error("Лотерея не найдена даже после обновления списка");
           }
         }
       } catch (err) {
@@ -71,8 +106,24 @@ const LotteryDetails = () => {
       }
     };
 
-    void fetchLottery();
-  }, [id, lotteries, refreshLotteries, getLotteryDraws]);
+    // Функция для получения результатов лотереи
+    const fetchLotteryResult = async (lotteryId: number) => {
+      try {
+        setResultLoading(true);
+        // Получаем данные о результатах лотереи
+        const result = await get<LotteryResult>(`/lottery/draws/${lotteryId}/result`);
+        setLotteryResult(result);
+      } catch (error) {
+        console.error("Error fetching lottery results:", error);
+      } finally {
+        setResultLoading(false);
+      }
+    };
+
+    if (id) {
+      void fetchLotteryData();
+    }
+  }, [id, lotteriesLoaded, lotteries, refreshLotteries, getLotteryDraws, getLotteryByDrawId]);
 
   if (loading) {
     return (
@@ -108,7 +159,7 @@ const LotteryDetails = () => {
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-8">
               <LotteryHeader lottery={lottery} />
-              <LotterySummary lottery={lottery} id={id} />
+              <LotterySummary lottery={lottery} id={id} lotteryResult={lotteryResult} />
             </div>
 
             <div className="md:col-span-4">
@@ -153,7 +204,7 @@ const LotteryDetails = () => {
                         <TableRow>
                           <TableHead>Дата розыгрыша</TableHead>
                           <TableHead>Призовой фонд</TableHead>
-                          <TableHead>Цена биле��а</TableHead>
+                          <TableHead>Цена билета</TableHead>
                           <TableHead>Статус</TableHead>
                           <TableHead>Действие</TableHead>
                         </TableRow>
@@ -228,7 +279,10 @@ const LotteryDetails = () => {
                             </TableCell>
                             <TableCell>{draw.price_currency} ₽</TableCell>
                             <TableCell>
-                              {draw.winning_str || "Не определена"}
+                              {(draw.id === Number(id) && lotteryResult)
+                                ? lotteryResult.winning_str
+                                : draw.winning_str || "Не определена"
+                              }
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Button } from "@/components/ui/button";
@@ -7,19 +7,40 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Search, TrendingUp, Users, Zap } from "lucide-react";
-import { useLotteries, Lottery } from "@/LotteriesContext.tsx";
+import { useLotteries, GroupedLottery, LotteryFilterParams } from "@/LotteriesContext.tsx";
 
 const LotteriesList = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const { lotteries } = useLotteries()
-  
-  const filteredLotteries = lotteries.filter((lottery) =>
-    lottery.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lottery.description_md.toLowerCase().includes(searchTerm.toLowerCase())
+  const { getFilteredGroupedLotteries, getLotteryByDrawId } = useLotteries();
+
+  // Определяем параметры фильтрации в зависимости от поиска
+  const filterParams: LotteryFilterParams = useMemo(() => ({
+    activeOnly: true, // показываем только активные лотереи
+    sortBy: 'date',   // сортируем по дате
+    sortDirection: 'asc'  // от ближайших к дальним
+  }), []);
+
+  // Получаем сгруппированные лотереи для каждого типа
+  const allLotteries = useMemo(() => {
+    const grouped = getFilteredGroupedLotteries(filterParams);
+    return grouped.filter(group =>
+      group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      group.draws.some(draw =>
+        draw.description_md.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [getFilteredGroupedLotteries, filterParams, searchTerm]);
+
+  // Фильтруем по типам
+  const traditionalLotteries = useMemo(() =>
+    allLotteries.filter(group => group.type === 1),
+    [allLotteries]
   );
   
-  const traditionalLotteries = filteredLotteries.filter((lottery) => lottery.lottery_type_id === 1);
-  const strategicLotteries = filteredLotteries.filter((lottery) => lottery.lottery_type_id === 2);
+  const strategicLotteries = useMemo(() =>
+    allLotteries.filter(group => group.type === 2),
+    [allLotteries]
+  );
 
   // Format time remaining function
   const formatTimeRemaining = (drawTime: string) => {
@@ -39,6 +60,67 @@ const LotteriesList = () => {
     }
   };
 
+  // Рендерим карточку лотереи
+  const renderLotteryCard = (group: GroupedLottery) => {
+    const lottery = group.nextDraw; // Используем ближайший розыгрыш для отображения
+
+    return (
+      <Card key={group.name} className="lottery-card overflow-hidden">
+        <div className="aspect-video bg-muted relative">
+          <img
+            src={'/placeholder.svg'}
+            alt={group.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute top-4 left-4">
+            <Badge variant={group.type === 1 ? "default" : "secondary"} className="shadow-md">
+              {group.type === 1 ? "Традиционная" : "Стратегическая"}
+            </Badge>
+          </div>
+        </div>
+        <CardHeader>
+          <CardTitle>{group.name}</CardTitle>
+          <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">Призовой фонд</span>
+              <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">Цена билета</span>
+              <span className="font-medium">
+                {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">Участников</span>
+              <span className="font-medium flex items-center">
+                <Users className="mr-1 h-3 w-3" />
+                {lottery.ticket_amount || 0}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground">До розыгрыша</span>
+              <span className="font-medium flex items-center">
+                <Clock className="mr-1 h-3 w-3" />
+                {formatTimeRemaining(lottery.end_date)}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
+            <Link to={`/lottery/${lottery.id}`}>
+              Подробнее
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  };
+
   return (
     <BaseLayout>
       <section className="mb-12">
@@ -46,7 +128,7 @@ const LotteriesList = () => {
         <p className="text-gray-500 mb-6">
           Выберите лотерею и испытайте свою удачу или стратегические навыки
         </p>
-        
+
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-8">
           <div className="relative w-full">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -58,191 +140,29 @@ const LotteriesList = () => {
             />
           </div>
         </div>
-        
+
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="all">Все лотереи</TabsTrigger>
             <TabsTrigger value="traditional">Традиционные</TabsTrigger>
             <TabsTrigger value="strategic">Стратегические</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="all" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredLotteries.map((lottery) => (
-                <Card key={lottery.id} className="lottery-card overflow-hidden">
-                  <div className="aspect-video bg-muted relative">
-                    <img 
-                      src={'/placeholder.svg'}
-                      alt={lottery.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge variant={lottery.lottery_type_id === 1 ? "default" : "secondary"} className="shadow-md">
-                        {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle>{lottery.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Призовой фонд</span>
-                        <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Цена билета</span>
-                        <span className="font-medium">
-                          {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Участников</span>
-                        <span className="font-medium flex items-center">
-                          <Users className="mr-1 h-3 w-3" />
-                          {lottery.ticket_amount || 0}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">До розыгрыша</span>
-                        <span className="font-medium flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {formatTimeRemaining(lottery.end_date)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
-                      <Link to={`/lottery/${lottery.id}`}>
-                        Подробнее
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+              {allLotteries.map(renderLotteryCard)}
             </div>
           </TabsContent>
           
           <TabsContent value="traditional" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {traditionalLotteries.map((lottery) => (
-                <Card key={lottery.id} className="lottery-card overflow-hidden">
-                  <div className="aspect-video bg-muted relative">
-                    <img 
-                      src={'/placeholder.svg'}
-                      alt={lottery.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge variant={lottery.lottery_type_id === 1 ? "default" : "secondary"} className="shadow-md">
-                        {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle>{lottery.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Призовой фонд</span>
-                        <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Цена билета</span>
-                        <span className="font-medium">
-                          {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Участников</span>
-                        <span className="font-medium flex items-center">
-                          <Users className="mr-1 h-3 w-3" />
-                          {lottery.ticket_amount || 0}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">До розыгрыша</span>
-                        <span className="font-medium flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {formatTimeRemaining(lottery.end_date)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
-                      <Link to={`/lottery/${lottery.id}`}>
-                        Подробнее
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+              {traditionalLotteries.map(renderLotteryCard)}
             </div>
           </TabsContent>
           
           <TabsContent value="strategic" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {strategicLotteries.map((lottery) => (
-                <Card key={lottery.id} className="lottery-card overflow-hidden">
-                  <div className="aspect-video bg-muted relative">
-                    <img 
-                      src={'/placeholder.svg'}
-                      alt={lottery.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge variant={lottery.lottery_type_id === 1 ? "default" : "secondary"} className="shadow-md">
-                        {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle>{lottery.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Призовой фонд</span>
-                        <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Цена билета</span>
-                        <span className="font-medium">
-                          {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Участников</span>
-                        <span className="font-medium flex items-center">
-                          <Users className="mr-1 h-3 w-3" />
-                          {lottery.ticket_amount || 0}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">До розыгрыша</span>
-                        <span className="font-medium flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {formatTimeRemaining(lottery.end_date)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
-                      <Link to={`/lottery/${lottery.id}`}>
-                        Подробнее
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+              {strategicLotteries.map(renderLotteryCard)}
             </div>
           </TabsContent>
         </Tabs>

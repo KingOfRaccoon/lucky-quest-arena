@@ -2,16 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Gift, TrendingUp, Calendar, Coins } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Coins, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Lottery } from "@/LotteriesContext";
+import { Lottery, LotteryResult } from "@/LotteriesContext";
+import { Badge } from "@/components/ui/badge";
 
 interface LotterySummaryProps {
   lottery: Lottery;
   id?: string | number;
+  lotteryResult?: LotteryResult | null;
 }
 
-const LotterySummary = ({ lottery, id }: LotterySummaryProps) => {
+const LotterySummary = ({ lottery, id, lotteryResult }: LotterySummaryProps) => {
   // Рассчитываем призовой фонд в зависимости от цены билета
   const prizePool = lottery.price_currency * lottery.ticket_amount; // Примерный расчет призового фонда
 
@@ -20,6 +22,11 @@ const LotterySummary = ({ lottery, id }: LotterySummaryProps) => {
 
   // Используем ID из лотереи, если он не передан явно
   const lotteryId = id || lottery.id;
+
+  // Проверка, что лотерея завершена
+  const now = new Date();
+  const endDate = new Date(lottery.end_date);
+  const isCompleted = now > endDate;
 
   // Рассчитываем процент заполнения билетов
   // TODO: Нет данных о максимальном количестве билетов, используем условное значение
@@ -62,6 +69,41 @@ const LotterySummary = ({ lottery, id }: LotterySummaryProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Блок с результатами лотереи, если она завершена */}
+      {isCompleted && lotteryResult && (
+        <Card className="mt-4 border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <Trophy className="h-5 w-5 mr-2 text-primary" />
+              Результаты розыгрыша
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Выигрышная комбинация:</p>
+                <p className="font-semibold text-lg">{lotteryResult.winning_str}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Выигрыш:</p>
+                <p className="font-semibold text-lg text-primary">{lotteryResult.reward_amount.toLocaleString()} ₽</p>
+              </div>
+            </div>
+            {lotteryResult.message && (
+              <div className="mt-3">
+                <p className="text-sm text-muted-foreground">Сообщение:</p>
+                <p className="text-sm">{lotteryResult.message}</p>
+              </div>
+            )}
+            <div className="mt-4 flex justify-end">
+              <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                Розыгрыш завершен
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="bg-muted/40 rounded-lg p-4 mt-6">
         <h2 className="font-semibold mb-2">Информация о лотерее</h2>
