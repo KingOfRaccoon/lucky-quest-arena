@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
@@ -17,11 +16,13 @@ import {
   Coins
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/UserContext"; // Импортируем useUser
 
 const BuyCurrency = () => {
+  const { user, addCurrency, addCredits, loading: userLoading, error: userError } = useUser(); // Используем useUser
   const [amount, setAmount] = useState<number>(500);
   const [paymentMethod, setPaymentMethod] = useState<string>("card");
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  // isProcessing теперь заменяется на userLoading из UserContext
   const { toast } = useToast();
 
   const handleQuickAmountSelect = (value: number) => {
@@ -37,7 +38,7 @@ const BuyCurrency = () => {
     setPaymentMethod(value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (amount <= 0) {
@@ -49,40 +50,70 @@ const BuyCurrency = () => {
       return;
     }
     
-    setIsProcessing(true);
-    
-    // Имитация процесса оплаты
-    setTimeout(() => {
-      setIsProcessing(false);
+    // Имитация процесса оплаты и обновление баланса через UserContext
+    try {
+      await addCurrency(amount); // Используем addCurrency из UserContext
       toast({
         title: "Успешно",
-        description: `На ваш счет зачислено ${amount} ₽`,
+        description: `На ваш счет зачислено ${amount} ₽.`,
       });
-    }, 1500);
+    } catch (error) {
+      console.error("Ошибка при пополнении баланса:", error);
+      toast({
+        title: "Ошибка пополнения",
+        description: (error as Error).message || "Не удалось пополнить баланс.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const bonusCalculator = (amount: number) => {
-    if (amount >= 5000) return Math.floor(amount * 0.2);
-    if (amount >= 2000) return Math.floor(amount * 0.15);
-    if (amount >= 1000) return Math.floor(amount * 0.1);
-    if (amount >= 500) return Math.floor(amount * 0.05);
+  const bonusCalculator = (value: number) => { // Переименовал параметр для ясности
+    if (value >= 5000) return Math.floor(value * 0.2);
+    if (value >= 2000) return Math.floor(value * 0.15);
+    if (value >= 1000) return Math.floor(value * 0.1);
+    if (value >= 500) return Math.floor(value * 0.05);
     return 0;
   };
 
   const bonusAmount = bonusCalculator(amount);
 
+  // Отображение текущего баланса пользователя
+  const currentCurrency = user?.currency ?? 0;
+  const currentCredits = user?.credits ?? 0;
+
+  if (userLoading && !user) { // Показываем загрузку, если пользователь еще не загружен
+    return (
+      <BaseLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p>Загрузка данных пользователя...</p>
+        </div>
+      </BaseLayout>
+    );
+  }
+
+  if (userError) {
+    return (
+      <BaseLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p>Ошибка загрузки данных: {userError}</p>
+        </div>
+      </BaseLayout>
+    );
+  }
+
   return (
     <BaseLayout>
       <div className="mb-4">
-        <Link to="/" className="text-primary flex items-center hover:underline">
+        <Link to="/profile" className="text-primary flex items-center hover:underline">
           <ChevronLeft size={16} />
-          <span>Назад на главную</span>
+          {/* Изменено направление ссылки на профиль, если это более логично */}
+          <span>Назад в профиль</span>
         </Link>
       </div>
       
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Пополнить баланс</h1>
-        <p className="text-gray-500">Пополните свой баланс для участия в лотереях</p>
+        <p className="text-gray-500">Текущий баланс: {currentCurrency} ₽ | Кредиты: {currentCredits}</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -94,6 +125,7 @@ const BuyCurrency = () => {
               </CardHeader>
               
               <CardContent className="space-y-6">
+                {/* ... остальная часть формы без изменений ... */}
                 <div className="grid grid-cols-4 gap-3">
                   {[500, 1000, 2000, 5000].map((value) => (
                     <Button
@@ -204,9 +236,9 @@ const BuyCurrency = () => {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={isProcessing || amount <= 0}
+                  disabled={userLoading || amount <= 0} // Используем userLoading
                 >
-                  {isProcessing ? 'Обработка...' : `Оплатить ${amount} ₽`}
+                  {userLoading ? 'Обработка...' : `Оплатить ${amount} ₽`}
                 </Button>
               </CardFooter>
             </form>
@@ -226,8 +258,8 @@ const BuyCurrency = () => {
                 </div>
                 {bonusAmount > 0 && (
                   <div className="flex justify-between mb-2 text-green-600">
-                    <span>Бонус:</span>
-                    <span className="font-medium">+{bonusAmount} бонусов</span>
+                    <span>Бонус (кредиты):</span>
+                    <span className="font-medium">+{bonusAmount} кредитов</span>
                   </div>
                 )}
                 <div className="border-t my-2"></div>
@@ -237,24 +269,25 @@ const BuyCurrency = () => {
                 </div>
               </div>
               
+              {/* ... остальная часть информации о бонусах без изменений ... */}
               <div className="space-y-3">
                 <h3 className="font-medium">Бонусная программа</h3>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start">
                     <CheckCircle className="h-4 w-4 mr-2 text-green-500 mt-0.5" />
-                    <span>От 500 ₽: +5% бонусов</span>
+                    <span>От 500 ₽: +5% кредитов</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="h-4 w-4 mr-2 text-green-500 mt-0.5" />
-                    <span>От 1000 ₽: +10% бонусов</span>
+                    <span>От 1000 ₽: +10% кредитов</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="h-4 w-4 mr-2 text-green-500 mt-0.5" />
-                    <span>От 2000 ₽: +15% бонусов</span>
+                    <span>От 2000 ₽: +15% кредитов</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="h-4 w-4 mr-2 text-green-500 mt-0.5" />
-                    <span>От 5000 ₽: +20% бонусов</span>
+                    <span>От 5000 ₽: +20% кредитов</span>
                   </li>
                 </ul>
               </div>
@@ -263,7 +296,7 @@ const BuyCurrency = () => {
                 <div className="flex items-start">
                   <Coins className="h-5 w-5 mr-3 text-green-600 mt-1" />
                   <div>
-                    <h3 className="font-medium text-green-800 mb-1">Бонусы можно использовать</h3>
+                    <h3 className="font-medium text-green-800 mb-1">Кредиты можно использовать</h3>
                     <p className="text-sm text-green-700">
                       Для покупки билетов на бонусные лотереи и доступа к стратегическим играм
                     </p>

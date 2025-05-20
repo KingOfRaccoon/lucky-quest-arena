@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Search, TrendingUp, Users, Zap } from "lucide-react";
-import {useLotteries} from "@/LotteriesContext.tsx";
+import { useLotteries, Lottery } from "@/LotteriesContext.tsx";
 
 const LotteriesList = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,11 +15,11 @@ const LotteriesList = () => {
   
   const filteredLotteries = lotteries.filter((lottery) =>
     lottery.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lottery.description.toLowerCase().includes(searchTerm.toLowerCase())
+    lottery.description_md.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  const traditionalLotteries = filteredLotteries.filter((lottery) => lottery.type === "traditional");
-  const strategicLotteries = filteredLotteries.filter((lottery) => lottery.type === "strategic");
+  const traditionalLotteries = filteredLotteries.filter((lottery) => lottery.lottery_type_id === 1);
+  const strategicLotteries = filteredLotteries.filter((lottery) => lottery.lottery_type_id === 2);
 
   // Format time remaining function
   const formatTimeRemaining = (drawTime: string) => {
@@ -72,42 +72,44 @@ const LotteriesList = () => {
                 <Card key={lottery.id} className="lottery-card overflow-hidden">
                   <div className="aspect-video bg-muted relative">
                     <img 
-                      src={lottery.image} 
+                      src={'/placeholder.svg'}
                       alt={lottery.name}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-4 left-4">
-                      <Badge variant={lottery.type === "traditional" ? "default" : "secondary"} className="shadow-md">
-                        {lottery.type === "traditional" ? "Традиционная" : "Стратегическая"}
+                      <Badge variant={lottery.lottery_type_id === 1 ? "default" : "secondary"} className="shadow-md">
+                        {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
                       </Badge>
                     </div>
                   </div>
                   <CardHeader>
                     <CardTitle>{lottery.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{lottery.description}</p>
+                    <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Призовой фонд</span>
-                        <span className="font-medium text-primary">{typeof lottery.prizePool === 'number' ? `${lottery.prizePool} ₽` : lottery.prizePool}</span>
+                        <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Цена билета</span>
-                        <span className="font-medium">{lottery.ticketPrice > 0 ? `${lottery.ticketPrice} ₽` : lottery.bonusCost ? `${lottery.bonusCost} бонусов` : "Бесплатно"}</span>
+                        <span className="font-medium">
+                          {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
+                        </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Участников</span>
                         <span className="font-medium flex items-center">
                           <Users className="mr-1 h-3 w-3" />
-                          {lottery.participantsCount}
+                          {lottery.ticket_amount || 0}
                         </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">До розыгрыша</span>
                         <span className="font-medium flex items-center">
                           <Clock className="mr-1 h-3 w-3" />
-                          {formatTimeRemaining(lottery.nextDraw)}
+                          {formatTimeRemaining(lottery.end_date)}
                         </span>
                       </div>
                     </div>
@@ -130,40 +132,44 @@ const LotteriesList = () => {
                 <Card key={lottery.id} className="lottery-card overflow-hidden">
                   <div className="aspect-video bg-muted relative">
                     <img 
-                      src={lottery.image} 
+                      src={'/placeholder.svg'}
                       alt={lottery.name}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-4 left-4">
-                      <Badge variant="default" className="shadow-md">Традиционная</Badge>
+                      <Badge variant={lottery.lottery_type_id === 1 ? "default" : "secondary"} className="shadow-md">
+                        {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
+                      </Badge>
                     </div>
                   </div>
                   <CardHeader>
                     <CardTitle>{lottery.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{lottery.description}</p>
+                    <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Призовой фонд</span>
-                        <span className="font-medium text-primary">{lottery.prizePool} ₽</span>
+                        <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Цена билета</span>
-                        <span className="font-medium">{lottery.ticketPrice} ₽</span>
+                        <span className="font-medium">
+                          {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
+                        </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Участников</span>
                         <span className="font-medium flex items-center">
                           <Users className="mr-1 h-3 w-3" />
-                          {lottery.participantsCount}
+                          {lottery.ticket_amount || 0}
                         </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">До розыгрыша</span>
                         <span className="font-medium flex items-center">
                           <Clock className="mr-1 h-3 w-3" />
-                          {formatTimeRemaining(lottery.nextDraw)}
+                          {formatTimeRemaining(lottery.end_date)}
                         </span>
                       </div>
                     </div>
@@ -186,40 +192,44 @@ const LotteriesList = () => {
                 <Card key={lottery.id} className="lottery-card overflow-hidden">
                   <div className="aspect-video bg-muted relative">
                     <img 
-                      src={lottery.image} 
+                      src={'/placeholder.svg'}
                       alt={lottery.name}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-4 left-4">
-                      <Badge variant="secondary" className="shadow-md">Стратегическая</Badge>
+                      <Badge variant={lottery.lottery_type_id === 1 ? "default" : "secondary"} className="shadow-md">
+                        {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
+                      </Badge>
                     </div>
                   </div>
                   <CardHeader>
                     <CardTitle>{lottery.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{lottery.description}</p>
+                    <p className="text-sm text-muted-foreground">{lottery.description_md}</p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Призовой фонд</span>
-                        <span className="font-medium text-primary">{lottery.prizePool}</span>
+                        <span className="font-medium text-primary">{lottery.price_currency * 1000} ₽</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Цена входа</span>
-                        <span className="font-medium">{lottery.bonusCost} бонусов</span>
+                        <span className="text-xs text-muted-foreground">Цена билета</span>
+                        <span className="font-medium">
+                          {lottery.price_credits > 0 ? `${lottery.price_credits} ₽` : lottery.bonus_credit ? `${lottery.bonus_credit} бонусов` : "Бесплатно"}
+                        </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">Участников</span>
                         <span className="font-medium flex items-center">
                           <Users className="mr-1 h-3 w-3" />
-                          {lottery.participantsCount}
+                          {lottery.ticket_amount || 0}
                         </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">До розыгрыша</span>
                         <span className="font-medium flex items-center">
                           <Clock className="mr-1 h-3 w-3" />
-                          {formatTimeRemaining(lottery.nextDraw)}
+                          {formatTimeRemaining(lottery.end_date)}
                         </span>
                       </div>
                     </div>

@@ -6,11 +6,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Trophy, Star } from "lucide-react";
-import { miniGames } from "@/data/mockData";
+import { useMiniGames } from "@/MiniGamesContext";
 import WordleGame from "@/components/mini-games/WordleGame";
 
 const MiniGames = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const { miniGames } = useMiniGames();
   const params = useParams();
   const gameId = params.id;
   

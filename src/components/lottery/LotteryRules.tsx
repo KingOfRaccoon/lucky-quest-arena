@@ -1,8 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Lottery } from "@/LotteriesContext";
 
 interface LotteryRulesProps {
-  lottery: any;
+  lottery: Lottery;
   maxSelectionOptions: number;
 }
 
@@ -13,14 +13,14 @@ const LotteryRules = ({ lottery, maxSelectionOptions }: LotteryRulesProps) => {
         <CardTitle>Правила лотереи</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p>{lottery.rules}</p>
-        
+        <p>{lottery.description_md}</p>
+
         <div className="space-y-2">
           <h3 className="font-semibold">Как работает розыгрыш</h3>
           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
             <li>Приобретите один или несколько билетов</li>
             <li>Выберите {maxSelectionOptions} чисел для каждого билета или воспользуйтесь автовыбором</li>
-            <li>Дождитесь розыгрыша, который проводится {lottery.drawFrequency.toLowerCase()}</li>
+            <li>Дождитесь розыгрыша, который проводится каждые N минут</li>
             <li>Результаты будут доступны в вашем личном кабинете</li>
             <li>Выигрыш зачисляется автоматически на счёт</li>
           </ul>
@@ -37,30 +37,30 @@ const LotteryRules = ({ lottery, maxSelectionOptions }: LotteryRulesProps) => {
                 </tr>
               </thead>
               <tbody>
-                {lottery.type === "traditional" ? (
+                {lottery.lottery_type_id === 1 ? (
                   <>
                     <tr className="border-b">
                       <td className="py-2">6 из 6</td>
-                      <td className="py-2 text-right font-medium">{lottery.jackpot} ₽</td>
+                      <td className="py-2 text-right font-medium">{lottery.price_currency * 1000} ₽</td>
                     </tr>
                     <tr className="border-b">
                       <td className="py-2">5 из 6</td>
-                      <td className="py-2 text-right font-medium">{Math.round(lottery.jackpot * 0.1)} ₽</td>
+                      <td className="py-2 text-right font-medium">{Math.round(lottery.price_currency * 1000 * 0.1)} ₽</td>
                     </tr>
                     <tr className="border-b">
                       <td className="py-2">4 из 6</td>
-                      <td className="py-2 text-right font-medium">{Math.round(lottery.jackpot * 0.05)} ₽</td>
+                      <td className="py-2 text-right font-medium">{Math.round(lottery.price_currency * 1000 * 0.05)} ₽</td>
                     </tr>
                     <tr>
                       <td className="py-2">3 из 6</td>
-                      <td className="py-2 text-right font-medium">{Math.round(lottery.ticketPrice * 5)} ₽</td>
+                      <td className="py-2 text-right font-medium">{Math.round(lottery.price_currency * 5)} ₽</td>
                     </tr>
                   </>
                 ) : (
                   <>
                     <tr className="border-b">
                       <td className="py-2">4 из 4</td>
-                      <td className="py-2 text-right font-medium">{lottery.jackpot}</td>
+                      <td className="py-2 text-right font-medium">{lottery.bonus_credit * 10} бонусов</td>
                     </tr>
                     <tr className="border-b">
                       <td className="py-2">3 из 4</td>

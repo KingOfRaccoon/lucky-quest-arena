@@ -1,11 +1,13 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import MiniGameCard from "./MiniGameCard";
-import { miniGames } from "@/data/mockData";
+import { useMiniGames } from "@/MiniGamesContext";
 
 const MiniGamesList = () => {
+  // Получаем данные из контекста
+  const { miniGames } = useMiniGames();
+
   // Get only first 3 mini games for display on the home page
   const displayedGames = miniGames.slice(0, 3);
   

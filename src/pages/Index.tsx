@@ -7,46 +7,61 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Ticket, Gift, Crown, Trophy, Clock, ArrowRight, User } from "lucide-react";
-import { miniGames, user, battlePassLevels, dailyTasks } from "@/data/mockData";
-import {useLotteries} from "@/LotteriesContext.tsx";
+import { useUser } from "@/UserContext";
+import { useBattlePass } from "@/BattlePassContext";
+import { useDailyTasks } from "@/TasksContext";
+import { useMiniGames } from "@/MiniGamesContext";
+import {Lottery, useLotteries} from "@/LotteriesContext.tsx";
 
 const Index = () => {
   const [countdown, setCountdown] = useState({ minutes: 0, seconds: 0 });
-  const { lotteries } = useLotteries();
-  const [nextLottery, setNextLottery] = useState(lotteries[0]);
+  const { lotteries, loading, error } = useLotteries(); // Добавил loading и error
+  const { user } = useUser();
+  const { battlePassLevels } = useBattlePass();
+  const { dailyTasks } = useDailyTasks();
+  const { miniGames } = useMiniGames();
+  const [nextLottery, setNextLottery] = useState<Lottery | null>(null); // Изменил тип и начальное значение
 
   // Calculate time until next draw
   useEffect(() => {
-    const sortedLotteries = [...lotteries].sort((a, b) => 
-      new Date(a.nextDraw).getTime() - new Date(b.nextDraw).getTime()
-    );
-    setNextLottery(sortedLotteries[0]);
-    
-    const timer = setInterval(() => {
-      const now = new Date();
-      const nextDraw = new Date(sortedLotteries[0].nextDraw);
-      const diff = nextDraw.getTime() - now.getTime();
-      
-      if (diff <= 0) {
-        clearInterval(timer);
-        setCountdown({ minutes: 0, seconds: 0 });
-      } else {
-        const minutes = Math.floor(diff / 1000 / 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setCountdown({ minutes, seconds });
-      }
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, []);
+    if (lotteries && lotteries.length > 0) {
+      const sortedLotteries = [...lotteries].sort((a, b) =>
+        new Date(a.end_date).getTime() - new Date(b.end_date).getTime() // Используем end_date
+      );
+      setNextLottery(sortedLotteries[0]);
+
+      const timer = setInterval(() => {
+        const now = new Date();
+        const nextDrawDate = sortedLotteries[0]?.end_date; // Проверка на существование
+        if (!nextDrawDate) {
+          clearInterval(timer);
+          setCountdown({ minutes: 0, seconds: 0 });
+          return;
+        }
+        const nextDraw = new Date(nextDrawDate);
+        const diff = nextDraw.getTime() - now.getTime();
+
+        if (diff <= 0) {
+          clearInterval(timer);
+          setCountdown({ minutes: 0, seconds: 0 });
+        } else {
+          const minutes = Math.floor(diff / 1000 / 60);
+          const seconds = Math.floor((diff / 1000) % 60);
+          setCountdown({ minutes, seconds });
+        }
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [lotteries]);
   
   // Calculate battle pass progress
-  const currentBattlePassLevel = battlePassLevels.find(level => level.level === user.battlePassLevel);
-  const nextBattlePassLevel = battlePassLevels.find(level => level.level === user.battlePassLevel + 1);
-  const battlePassProgress = nextBattlePassLevel
-    ? ((user.battlePassXp - (currentBattlePassLevel?.xpRequired || 0)) / 
+  const currentBattlePassLevel = user && battlePassLevels.find(level => level.level === user.battlePassLevel);
+  const nextBattlePassLevel = user && battlePassLevels.find(level => level.level === user.battlePassLevel + 1);
+  const battlePassProgress = user && nextBattlePassLevel
+    ? ((user.battlePassXp - (currentBattlePassLevel?.xpRequired || 0)) /
        (nextBattlePassLevel.xpRequired - (currentBattlePassLevel?.xpRequired || 0))) * 100
-    : 100;
+    : 0;
 
   return (
     <BaseLayout>
@@ -80,29 +95,37 @@ const Index = () => {
             <div className="flex items-center justify-center">
               <div className="glass-card p-6 rounded-xl w-full max-w-md">
                 <h3 className="font-bold text-xl mb-2">Ближайший розыгрыш</h3>
-                <div className="mb-4">
-                  <p className="text-sm font-semibold">{nextLottery.name}</p>
-                  <p className="text-sm opacity-90">{nextLottery.description}</p>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium flex items-center">
-                    <Clock size={16} className="mr-1" /> До розыгрыша:
-                  </span>
-                  <span className="countdown">
-                    {countdown.minutes.toString().padStart(2, '0')}:{countdown.seconds.toString().padStart(2, '0')}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm mb-4">
-                  <span>Призовой фонд:</span>
-                  <span className="font-bold">{typeof nextLottery.prizePool === 'number' ? `${nextLottery.prizePool} ₽` : nextLottery.prizePool}</span>
-                </div>
-                <div className="text-center">
-                  <Button className="w-full game-button" asChild>
-                    <Link to={`/lottery/${nextLottery.id}`}>
-                      Участвовать
-                    </Link>
-                  </Button>
-                </div>
+                {nextLottery ? (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold">{nextLottery.name}</p>
+                      <p className="text-sm opacity-90">{nextLottery.description_md}</p> {/* Используем description_md */}
+                    </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium flex items-center">
+                        <Clock size={16} className="mr-1" /> До розыгрыша:
+                      </span>
+                      <span className="countdown">
+                        {countdown.minutes.toString().padStart(2, '0')}:{countdown.seconds.toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mb-4">
+                      <span>Призовой фонд:</span>
+                      <span className="font-bold">{nextLottery.price_currency} ₽</span> {/* Используем price_currency */}
+                    </div>
+                    <div className="text-center">
+                      <Button className="w-full game-button" asChild>
+                        <Link to={`/lottery/${nextLottery.id}`}>
+                          Участвовать
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                ) : loading ? (
+                  <p>Загрузка ближайшей лотереи...</p>
+                ) : (
+                  <p>Нет доступных лотерей.</p>
+                )}
               </div>
             </div>
           </div>
@@ -120,7 +143,7 @@ const Index = () => {
                   Battle Pass
                 </CardTitle>
                 <Badge variant="outline" className="bg-primary/10 text-primary">
-                  Уровень {user.battlePassLevel}
+                  Уровень {user?.battlePassLevel || 1}
                 </Badge>
               </div>
               <CardDescription>
@@ -132,7 +155,7 @@ const Index = () => {
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Прогресс</span>
                   <span className="text-sm text-muted-foreground">
-                    {user.battlePassXp}/{nextBattlePassLevel?.xpRequired || "MAX"} XP
+                    {user?.battlePassXp || 0}/{nextBattlePassLevel?.xpRequired || "MAX"} XP
                   </span>
                 </div>
                 <Progress value={battlePassProgress} className="h-2" />
@@ -141,7 +164,7 @@ const Index = () => {
                   {battlePassLevels.slice(0, 5).map((level) => (
                     <div 
                       key={level.level} 
-                      className={`battle-pass-level ${level.level <= user.battlePassLevel ? "completed" : level.level === user.battlePassLevel + 1 ? "active" : "border-gray-300"}`}
+                      className={`battle-pass-level ${user && level.level <= user.battlePassLevel ? "completed" : user && level.level === user.battlePassLevel + 1 ? "active" : "border-gray-300"}`}
                     >
                       {level.level}
                     </div>
@@ -222,62 +245,68 @@ const Index = () => {
           </div>
           
           <TabsContent value="lotteries" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lotteries.slice(0, 3).map((lottery) => (
-                <Card key={lottery.id} className="lottery-card overflow-hidden">
-                  <div className="aspect-video bg-muted relative">
-                    <img 
-                      src={lottery.image} 
-                      alt={lottery.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                      <Badge className="mb-2" variant={lottery.type === "traditional" ? "default" : "secondary"}>
-                        {lottery.type === "traditional" ? "Традиционная" : "Стратегическая"}
-                      </Badge>
-                      <h3 className="text-lg font-semibold text-white">{lottery.name}</h3>
-                    </div>
-                  </div>
-                  <CardContent className="pt-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Розыгрыш через:</span>
-                        <span className="font-medium">
-                          {new Date(lottery.nextDraw).getMinutes()} мин
-                        </span>
+            {loading && <p>Загрузка лотерей...</p>}
+            {error && <p>Ошибка загрузки лотерей: {error}</p>}
+            {!loading && !error && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {lotteries && lotteries.map((lottery) => (
+                    <Card key={lottery.id} className="lottery-card overflow-hidden">
+                      <div className="aspect-video bg-muted relative">
+                        <img
+                          src={'/placeholder.svg'} // Используем заглушку, т.к. в API нет поля image
+                          alt={lottery.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                          <Badge className="mb-2" variant={lottery.lottery_type_id === 1 ? "default" : "secondary"}>
+                            {lottery.lottery_type_id === 1 ? "Традиционная" : "Стратегическая"}
+                          </Badge>
+                          <h3 className="text-lg font-semibold text-white">{lottery.name}</h3>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Призовой фонд:</span>
-                        <span className="font-medium text-primary">
-                          {typeof lottery.prizePool === 'number' ? `${lottery.prizePool} ₽` : lottery.prizePool}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Цена билета:</span>
-                        <span className="font-medium">
-                          {lottery.ticketPrice > 0 ? `${lottery.ticketPrice} ₽` : lottery.bonusCost ? `${lottery.bonusCost} бонусов` : "Бесплатно"}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
-                      <Link to={`/lottery/${lottery.id}`}>
-                        Подробнее
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-            <div className="mt-6 text-center">
-              <Button variant="outline" asChild>
-                <Link to="/lotteries">
-                  Все лотереи
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+                      <CardContent className="pt-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Розыгрыш:</span>
+                            <span className="font-medium">
+                              {new Date(lottery.end_date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Призовой фонд:</span>
+                            <span className="font-medium text-primary">
+                              {lottery.price_currency} ₽
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Цена билета:</span>
+                            <span className="font-medium">
+                              {lottery.price_currency > 0 ? `${lottery.price_currency} ₽` : lottery.price_credits ? `${lottery.price_credits} бонусов` : "Бесплатно"}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button className="w-full bg-primary text-white hover:bg-primary/90" asChild>
+                          <Link to={`/lottery/${lottery.id}`}>
+                            Подробнее
+                          </Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+                <div className="mt-6 text-center">
+                  <Button variant="outline" asChild>
+                    <Link to="/lotteries">
+                      Все лотереи
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </>
+            )}
           </TabsContent>
           
           <TabsContent value="minigames" className="mt-0">

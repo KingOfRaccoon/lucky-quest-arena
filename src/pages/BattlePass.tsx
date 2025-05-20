@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Button } from "@/components/ui/button";
@@ -8,13 +7,20 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Gift, Clock, CheckCircle, LayoutList } from "lucide-react";
-import { user, battlePassLevels, dailyTasks, weeklyTasks } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/UserContext";
+import { useBattlePass } from "@/BattlePassContext";
+import { useDailyTasks } from "@/TasksContext";
+import { useWeeklyTasks } from "@/TasksContext";
 
 const BattlePass = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("rewards");
-  
+  const { user } = useUser();
+  const { battlePassLevels } = useBattlePass();
+  const { dailyTasks } = useDailyTasks();
+  const { weeklyTasks } = useWeeklyTasks();
+
   // Calculate current level progress
   const currentLevel = battlePassLevels.find(level => level.level === user.battlePassLevel);
   const nextLevel = battlePassLevels.find(level => level.level === user.battlePassLevel + 1);

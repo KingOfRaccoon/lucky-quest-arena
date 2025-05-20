@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
@@ -124,7 +123,7 @@ const LotteryResults = () => {
         <div className="flex items-center gap-4">
           <div className="bg-white shadow rounded-xl overflow-hidden h-16 w-16">
             <img 
-              src={lottery.image || "/placeholder.svg"} 
+              src={"/placeholder.svg"}
               alt={lottery.name}
               className="w-full h-full object-cover"
             />
@@ -472,7 +471,7 @@ const LotteryResults = () => {
                     Знаете ли вы?
                   </h3>
                   <p className="text-sm">
-                    Вероятность выигрыша джекпота в этой лотерее составляет 1 к {Number(lottery.type === "traditional" ? '8,145,060' : '4,845').toLocaleString()}. Это {lottery.type === "traditional" ? "меньше" : "больше"}, чем вероятность быть ударенным молнией (1 к 700,000).
+                    Вероятность выигрыша джекпота в этой лотерее составляет 1 к {Number(lottery.lottery_type_id === 1 ? '8,145,060' : '4,845').toLocaleString()}. Это {lottery.lottery_type_id === 1 ? "меньше" : "больше"}, чем вероятность быть ударенным молнией (1 к 700,000).
                   </p>
                 </div>
               </CardContent>

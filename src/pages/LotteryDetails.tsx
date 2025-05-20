@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
@@ -12,21 +11,35 @@ import LotteryInfo from "@/components/lottery/LotteryInfo";
 import BuyTicketTab from "@/components/lottery/BuyTicketTab";
 import LotteryRules from "@/components/lottery/LotteryRules";
 import MiniGamesList from "@/components/lottery/MiniGamesList";
-import {Lottery, useLotteries} from "@/LotteriesContext.tsx";
+import { Lottery, useLotteries } from "@/LotteriesContext.tsx";
 
 const LotteryDetails = () => {
-  const { id } = useParams();
-  const { lotteries } = useLotteries();
-  const [lottery, setLottery] = useState<Lottery>(null);
-  
-  useEffect(() => {
-    const foundLottery = lotteries.find((l) => l.id === Number(id));
-    if (foundLottery) {
-      setLottery(foundLottery);
-    }
-  }, [id]);
+  const { id } = useParams<{ id: string }>();
+  const { lotteries, refreshLotteries } = useLotteries();
+  const [lottery, setLottery] = useState<Lottery | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  if (!lottery) {
+  useEffect(() => {
+    const fetchLottery = async () => {
+      setLoading(true);
+
+      // Если список лотерей пуст, запросим его
+      if (lotteries.length === 0) {
+        await refreshLotteries();
+      }
+
+      const foundLottery = lotteries.find((l) => l.id === Number(id));
+      if (foundLottery) {
+        setLottery(foundLottery);
+      }
+
+      setLoading(false);
+    };
+
+    void fetchLottery();
+  }, [id, lotteries, refreshLotteries]);
+
+  if (loading) {
     return (
       <BaseLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -36,7 +49,17 @@ const LotteryDetails = () => {
     );
   }
 
-  const maxSelectionOptions = lottery?.type === "traditional" ? 6 : 4;
+  if (!lottery) {
+    return (
+      <BaseLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p>Лотерея не найдена</p>
+        </div>
+      </BaseLayout>
+    );
+  }
+
+  const maxSelectionOptions = lottery.lottery_type_id === 1 ? 6 : 4;
 
   return (
     <BaseLayout>
