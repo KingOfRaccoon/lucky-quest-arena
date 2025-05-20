@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import BaseLayout from "@/components/layout/BaseLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Info, Ticket as TicketIcon, Timer, Calendar } from "lucide-react";
+import { Info, Ticket as TicketIcon, Timer, Calendar, User } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -22,6 +22,7 @@ import LotteryInfo from "@/components/lottery/LotteryInfo";
 import BuyTicketTab from "@/components/lottery/BuyTicketTab";
 import LotteryRules from "@/components/lottery/LotteryRules";
 import MiniGamesList from "@/components/lottery/MiniGamesList";
+import UserTicketsTab from "@/components/lottery/UserTicketsTab";
 import { Lottery, LotteryResult, useLotteries } from "@/LotteriesContext.tsx";
 
 const LotteryDetails = () => {
@@ -171,7 +172,7 @@ const LotteryDetails = () => {
 
       <section>
         <Tabs defaultValue="buy" className="w-full">
-          <TabsList className="mb-6 grid grid-cols-4">
+          <TabsList className="mb-6 grid grid-cols-5">
             <TabsTrigger value="buy" className="flex items-center">
               <TicketIcon className="mr-2 h-4 w-4" /> Купить билет
             </TabsTrigger>
@@ -183,6 +184,9 @@ const LotteryDetails = () => {
             </TabsTrigger>
             <TabsTrigger value="minigames" className="flex items-center">
               <Timer className="mr-2 h-4 w-4" /> Мини-игры
+            </TabsTrigger>
+            <TabsTrigger value="mytickets" className="flex items-center">
+              <User className="mr-2 h-4 w-4" /> Мои билеты
             </TabsTrigger>
           </TabsList>
           
@@ -307,6 +311,10 @@ const LotteryDetails = () => {
 
           <TabsContent value="minigames" className="mt-0">
             <MiniGamesList />
+          </TabsContent>
+
+          <TabsContent value="mytickets" className="mt-0">
+            <UserTicketsTab lottery={lottery} />
           </TabsContent>
         </Tabs>
       </section>

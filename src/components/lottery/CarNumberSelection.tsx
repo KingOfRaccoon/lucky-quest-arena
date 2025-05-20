@@ -18,6 +18,13 @@ interface CarNumberSelectionProps {
     thirdNumbers: string;
     setThirdNumbers: (numbers: string) => void;
     onValidationChange: (isValid: boolean) => void;
+    onBatchUpdate?: (update: {
+        selectedLetter: string;
+        firstNumbers: string;
+        secondNumbers: string;
+        thirdNumbers: string;
+        isValid: boolean;
+    }) => void;
 }
 
 const CarNumberSelection = ({
@@ -29,7 +36,8 @@ const CarNumberSelection = ({
                                 setSecondNumbers,
                                 thirdNumbers,
                                 setThirdNumbers,
-                                onValidationChange
+                                onValidationChange,
+                                onBatchUpdate
                             }: CarNumberSelectionProps) => {
     const [isFirstNumbersValid, setIsFirstNumbersValid] = useState(false);
     const [isSecondNumbersValid, setIsSecondNumbersValid] = useState(false);
@@ -50,7 +58,8 @@ const CarNumberSelection = ({
     // Проверка и обработка ввода для первой группы цифр (3 цифры)
     const handleFirstNumbersChange = (value: string) => {
         // Оставляем только цифры и ограничиваем длину
-        const sanitized = value.replace(/\D/g, '').slice(0, 3);
+        const sanitized = value.replace(/[^0-9]/g, '').slice(0, 3);
+        console.log("Очищенное значение для цифр номера:", sanitized);
         setFirstNumbers(sanitized);
 
         const isValid = sanitized.length === 3;
@@ -58,10 +67,16 @@ const CarNumberSelection = ({
         updateValidationStatus(isValid, isSecondNumbersValid, isThirdNumbersValid, selectedLetter);
     };
 
-    // Проверка и обработка ввода для второй группы цифр (2 цифры)
-    const handleSecondNumbersChange = (value: string) => {
-        // Оставляем только цифры и ограничиваем длину
-        const sanitized = value.replace(/\D/g, '').slice(0, 2);
+    // Проверка и обработка ввода для второй группы - букв серии (2 буквы)
+    const handleSecondLettersChange = (value: string) => {
+        // Только кириллические буквы из разрешенного списка
+        const sanitized = value
+            .toUpperCase()
+            .split('')
+            .filter(char => ALLOWED_LETTERS.includes(char))
+            .slice(0, 2)
+            .join('');
+        console.log("Очищенное значение для букв серии:", sanitized);
         setSecondNumbers(sanitized);
 
         const isValid = sanitized.length === 2;
@@ -69,10 +84,11 @@ const CarNumberSelection = ({
         updateValidationStatus(isFirstNumbersValid, isValid, isThirdNumbersValid, selectedLetter);
     };
 
-    // Проверка и обработка ввода для третьей группы цифр (2 цифры)
+    // Проверка и обработка ввода для третьей группы цифр - код региона (2 цифры)
     const handleThirdNumbersChange = (value: string) => {
         // Оставляем только цифры и ограничиваем длину
-        const sanitized = value.replace(/\D/g, '').slice(0, 2);
+        const sanitized = value.replace(/[^0-9]/g, '').slice(0, 2);
+        console.log("Очищенное значение для региона:", sanitized);
         setThirdNumbers(sanitized);
 
         const isValid = sanitized.length === 2;
@@ -94,13 +110,13 @@ const CarNumberSelection = ({
         // Случайные цифры для первого поля (3 цифры, от 1 до 999)
         const randomFirst = (Math.floor(Math.random() * 999) + 1).toString().padStart(3, '0');
 
-        // Случайные буквы для второго поля (2 буквы)
+        // Случайные буквы для второго поля (2 буквы из разрешенного списка)
         let randomSecondLetters = '';
         for (let i = 0; i < 2; i++) {
             randomSecondLetters += ALLOWED_LETTERS[Math.floor(Math.random() * ALLOWED_LETTERS.length)];
         }
 
-        // Регионы РФ для ав��омобильных номеров (актуальные)
+        // Регионы РФ для автомобильных номеров (актуальные)
         const validRegions = [
             "01", "02", "03", "04", "05", "06", "07", "08", "09",
             "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
@@ -117,16 +133,33 @@ const CarNumberSelection = ({
         // Случайный регион из списка допустимых
         const randomThird = validRegions[Math.floor(Math.random() * validRegions.length)];
 
-        setSelectedLetter(randomLetter);
-        setFirstNumbers(randomFirst);
-        setSecondNumbers(randomSecondLetters);
-        setThirdNumbers(randomThird);
+        console.log("Сгенерирован случайный номер:", randomLetter + randomFirst + randomSecondLetters + randomThird);
 
-        // Установка всех флагов валидации н�� true
-        setIsFirstNumbersValid(true);
-        setIsSecondNumbersValid(true);
-        setIsThirdNumbersValid(true);
-        onValidationChange(true);
+        // Вместо последовательного вызова set-функций, вызываем родительский колбэк с объектом изменений
+        if (typeof onBatchUpdate === 'function') {
+            // Пакетное обновление для родительского компонента
+            onBatchUpdate({
+                selectedLetter: randomLetter,
+                firstNumbers: randomFirst,
+                secondNumbers: randomSecondLetters,
+                thirdNumbers: randomThird,
+                isValid: true
+            });
+        } else {
+            // Резервный вариант, если onBatchUpdate не предоставлен
+            setSelectedLetter(randomLetter);
+            setFirstNumbers(randomFirst);
+            setSecondNumbers(randomSecondLetters);
+            setThirdNumbers(randomThird);
+
+            // Установка всех флагов валидации на true
+            setIsFirstNumbersValid(true);
+            setIsSecondNumbersValid(true);
+            setIsThirdNumbersValid(true);
+
+            // Обязательно вызываем колбэк валидации
+            onValidationChange(true);
+        }
     };
 
     // Очистка всех полей

@@ -1,23 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useContext, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import NumberSelection from "./NumberSelection";
 import CarNumberSelection from "./CarNumberSelection";
 import TicketQuantity from "./TicketQuantity";
 import { Lottery } from "@/LotteriesContext";
+import { post } from "@/services/api"; // Импортируем функцию для POST-запросов
+import {UserContext, useUser} from "@/UserContext"; // Импортируем контекст пользователя
+import { useLotteries } from "@/LotteriesContext"; // Импортируем контекст лотерей
 
 interface BuyTicketTabProps {
   lottery: Lottery;
   maxSelectionOptions: number;
-}
-
-// Тип для хранения данных автомобильного номера
-interface CarNumberData {
-  selectedLetter: string;
-  firstNumbers: string;
-  secondNumbers: string;
-  thirdNumbers: string;
-  isValid: boolean;
 }
 
 const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
@@ -30,39 +24,20 @@ const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
     const max = lottery.lottery_type_id === 1 ? 36 : 20;
     return Array.from({ length: max }, (_, i) => i + 1);
   });
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // Массив для хранения данных всех автомобильных номеров
-  const [carNumbersData, setCarNumbersData] = useState<CarNumberData[]>([{
-    selectedLetter: '',
-    firstNumbers: '',
-    secondNumbers: '',
-    thirdNumbers: '',
-    isValid: false
-  }]);
+  // Состояния для выбора автомобильного номера (только для лотереи типа "special")
+  const [selectedLetter, setSelectedLetter] = useState<string>('');
+  const [firstNumbers, setFirstNumbers] = useState<string>('');
+  const [secondNumbers, setSecondNumbers] = useState<string>('');
+  const [thirdNumbers, setThirdNumbers] = useState<string>('');
+  const [isCarNumberValid, setIsCarNumberValid] = useState<boolean>(false);
+
+  // Получаем контексты пользователя и лотерей
+  const { user, refreshUserData } = useUser();
+  const { fetchUserTickets } = useLotteries();
 
   const { toast } = useToast();
-
-  // Обновляем массив автомобильных номеров при изменении количества билетов
-  useEffect(() => {
-    // Если число вводов меньше выбранного количества, добавляем недостающие
-    if (carNumbersData.length < ticketCount) {
-      const newCarNumbers = [...carNumbersData];
-      for (let i = carNumbersData.length; i < ticketCount; i++) {
-        newCarNumbers.push({
-          selectedLetter: '',
-          firstNumbers: '',
-          secondNumbers: '',
-          thirdNumbers: '',
-          isValid: false
-        });
-      }
-      setCarNumbersData(newCarNumbers);
-    }
-    // Если число вводов больше выбранного количества, удаляем лишние
-    else if (carNumbersData.length > ticketCount) {
-      setCarNumbersData(carNumbersData.slice(0, ticketCount));
-    }
-  }, [ticketCount]);
 
   const handleTicketCountChange = (increment: number) => {
     const newCount = ticketCount + increment;
@@ -90,54 +65,90 @@ const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
     }
   };
 
-  // Функция для обновления данных конкретного автомобильного номера
-  const updateCarNumber = (index: number, field: keyof CarNumberData, value: string | boolean) => {
-    const newCarNumbersData = [...carNumbersData];
-    newCarNumbersData[index] = {
-      ...newCarNumbersData[index],
-      [field]: value
-    };
-    setCarNumbersData(newCarNumbersData);
+  // Функция для покупки билетов через API
+  const purchaseTickets = async (valueStr: string, isRealMoney: boolean) => {
+    try {
+      setLoading(true);
+
+      // ID профиля пользователя (в продакшн версии брать из контекста пользователя)
+      const profileId = user?.id || 1;
+
+      // Подготавливаем данные для запроса
+      const requestData = {
+        id: lottery.id,
+        profile_id: profileId,
+        value_str: valueStr,
+        real_price: isRealMoney
+      };
+
+      console.log('Отправляем запрос на покупку билета:', requestData);
+
+      // Выполняем POST-запрос на покупку билета
+      const response = await post('/tickets/purchase', requestData);
+
+      console.log('Ответ от сервера:', response);
+
+      // При успешной покупке обновляем данные пользователя и его билеты
+      await refreshUserData();
+      await fetchUserTickets(profileId);
+
+      // Показываем уведомление об успешной покупке
+      toast({
+        title: `${ticketCount > 1 ? 'Билеты' : 'Билет'} приобретен!`,
+        description: `Вы успешно купили билет ${valueStr} в лотерею "${lottery.name}"`,
+        variant: "default",
+      });
+
+      // Сбрасываем выбранные значения
+      resetSelections();
+
+    } catch (error) {
+      console.error('Ошибка при покупке билета:', error);
+
+      // Показываем уведомление об ошибке
+      toast({
+        title: "Ошибка при покупке",
+        description: "Не удалось приобрести билет. Пожалуйста, попробуйте еще раз.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Проверка валидности всех автомобильных номеров
-  const areAllCarNumbersValid = (): boolean => {
-    return carNumbersData.slice(0, ticketCount).every(data => data.isValid);
+  // Функция для сброса выбранных значений
+  const resetSelections = () => {
+    if (lottery.lottery_type_id === 1) { // Для автомобильных номеров
+      setSelectedLetter('');
+      setFirstNumbers('');
+      setSecondNumbers('');
+      setThirdNumbers('');
+      setIsCarNumberValid(false);
+    } else { // Для обычных лотерей
+      setSelectedNumbers([]);
+    }
   };
 
-  const handleBuyTicket = () => {
-    // Для лотереи "АвтоНомер" проверяем валидность всех номеров
-    if (lottery.lottery_type_id === 2) {
-      if (!areAllCarNumbersValid()) {
+  const handleBuyTicket = async () => {
+    // Для лотереи с автомобильными номерами
+    if (lottery.lottery_type_id === 1) {
+      if (!isCarNumberValid) {
         toast({
           title: "Неверный формат номера",
-          description: "Пожалуйста, заполните корректно все автомобильные номера",
+          description: "Пожалуйста, заполните корректно автомобильный номер",
           variant: "destructive",
         });
         return;
       }
 
-      // Подготовим строки для отображения номеров в уведомлении
-      const carNumberStrings = carNumbersData.map(data =>
-        `${data.selectedLetter}${data.firstNumbers}${data.secondNumbers}${data.thirdNumbers}`
-      );
+      // Формируем строку номера
+      const valueStr = `${selectedLetter}${firstNumbers}${secondNumbers}${thirdNumbers}`;
 
-      toast({
-        title: `${ticketCount > 1 ? 'Билеты' : 'Билет'} приобретен!`,
-        description: `Вы купили ${ticketCount} билет${ticketCount > 1 ? 'а' : ''} с номер${ticketCount > 1 ? 'ами' : 'ом'}: ${carNumberStrings.join(', ')} за ${getCurrentPrice() * ticketCount} ${paymentMethod === 'currency' ? '₽' : 'баллов'}`,
-      });
+      // Покупаем билет (true для реальных денег, false для бонусов)
+      await purchaseTickets(valueStr, paymentMethod === 'currency');
 
-      // Сбросить все номера
-      const resetCarNumbers = Array(ticketCount).fill({
-        selectedLetter: '',
-        firstNumbers: '',
-        secondNumbers: '',
-        thirdNumbers: '',
-        isValid: false
-      });
-      setCarNumbersData(resetCarNumbers);
     } else {
-      // Для обычных лотерей
+      // Для обычных лотерей с выбором чисел
       if (selectedNumbers.length !== maxSelectionOptions) {
         toast({
           title: "Недостаточно чисел",
@@ -147,80 +158,48 @@ const BuyTicketTab = ({ lottery, maxSelectionOptions }: BuyTicketTabProps) => {
         return;
       }
 
-      toast({
-        title: "Билет приобретён!",
-        description: `Вы купили ${ticketCount} билет${ticketCount > 1 ? 'а' : ''} с числами ${selectedNumbers.join(', ')} за ${getCurrentPrice() * ticketCount} ${paymentMethod === 'currency' ? '₽' : 'баллов'}`,
-      });
+      // Формируем строку с выбранными числами
+      const valueStr = selectedNumbers.sort((a, b) => a - b).join(',');
 
-      // Сброс выбора после покупки
-      setSelectedNumbers([]);
+      // Покупаем билет
+      await purchaseTickets(valueStr, paymentMethod === 'currency');
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-4 md:p-6">
-        <h2 className="text-xl font-bold mb-6">Купить билет</h2>
-
-        {/* Выбор комбинации для обычной лотереи */}
-        {lottery.lottery_type_id === 2 && (
-          <NumberSelection
-            numberOptions={numberOptions}
-            maxSelectionOptions={maxSelectionOptions}
-            selectedNumbers={selectedNumbers}
-            setSelectedNumbers={setSelectedNumbers}
-          />
-        )}
-
-        {/* Выбор автомобильного номера для специальной лотереи */}
-        {lottery.lottery_type_id === 1 && (
-          <div>
-            {carNumbersData.map((data, index) => (
-              <div key={index} className="mb-6">
-                {ticketCount > 1 && (
-                  <h3 className="font-semibold text-lg mb-2">Билет {index + 1}</h3>
-                )}
-                <CarNumberSelection
-                  selectedLetter={data.selectedLetter}
-                  setSelectedLetter={(value) => updateCarNumber(index, 'selectedLetter', value)}
-                  firstNumbers={data.firstNumbers}
-                  setFirstNumbers={(value) => updateCarNumber(index, 'firstNumbers', value)}
-                  secondNumbers={data.secondNumbers}
-                  setSecondNumbers={(value) => updateCarNumber(index, 'secondNumbers', value)}
-                  thirdNumbers={data.thirdNumbers}
-                  setThirdNumbers={(value) => updateCarNumber(index, 'thirdNumbers', value)}
-                  onValidationChange={(isValid) => updateCarNumber(index, 'isValid', isValid)}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Секция выбора количества билетов */}
-        <TicketQuantity
-            lottery={lottery}
-            ticketCount={ticketCount}
-            handleTicketCountChange={handleTicketCountChange}
-            paymentMethod={paymentMethod}
-            setPaymentMethod={setPaymentMethod}
+    <div className="mb-6">
+      {lottery.lottery_type_id === 1 ? (
+        <CarNumberSelection
+          selectedLetter={selectedLetter}
+          setSelectedLetter={setSelectedLetter}
+          firstNumbers={firstNumbers}
+          setFirstNumbers={setFirstNumbers}
+          secondNumbers={secondNumbers}
+          setSecondNumbers={setSecondNumbers}
+          thirdNumbers={thirdNumbers}
+          setThirdNumbers={setThirdNumbers}
+          onValidationChange={setIsCarNumberValid}
         />
+      ) : (
+        <NumberSelection
+          numberOptions={numberOptions}
+          maxSelectionOptions={maxSelectionOptions}
+          selectedNumbers={selectedNumbers}
+          setSelectedNumbers={setSelectedNumbers}
+        />
+      )}
 
-        {/* Секция покупки билета */}
-        <div className="mt-6">
-          <Button
-            onClick={handleBuyTicket}
-            className="w-full"
-            size="lg"
-            disabled={
-              lottery.lottery_type_id === 1
-                ? selectedNumbers.length !== maxSelectionOptions
-                : !areAllCarNumbersValid()
-            }
-          >
-            {getBuyButtonText()}
-          </Button>
-        </div>
-      </div>
+      <TicketQuantity
+        lottery={lottery}
+        ticketCount={ticketCount}
+        handleTicketCountChange={handleTicketCountChange}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+      />
+
+      <Button variant="primary" className="w-full" size="lg" onClick={handleBuyTicket} disabled={loading}>
+        {getBuyButtonText()}
+      </Button>
     </div>
   );
 };
